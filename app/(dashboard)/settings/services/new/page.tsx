@@ -1,8 +1,11 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { getTenantProfile } from '@/modules/settings/queries'
 import { ServiceForm } from '../service-form'
 
-export default function NewServicePage() {
+export default async function NewServicePage() {
+  const tenantProfile = await getTenantProfile()
+
   return (
     <div className="space-y-6 max-w-xl">
       <Link href="/settings/services" className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
@@ -14,7 +17,7 @@ export default function NewServicePage() {
         <p className="text-sm text-zinc-500">Vorlage für Rechnungspositionen</p>
       </div>
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <ServiceForm />
+        <ServiceForm tenantProfile={tenantProfile} />
       </div>
     </div>
   )

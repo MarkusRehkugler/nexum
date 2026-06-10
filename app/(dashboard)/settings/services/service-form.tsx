@@ -2,15 +2,17 @@
 
 import { useRouter } from 'next/navigation'
 import { UNIT_OPTIONS } from '@/modules/settings/types'
-import type { ServiceItem } from '@/modules/settings/types'
+import type { ServiceItem, TenantProfile } from '@/modules/settings/types'
 import { createServiceItemAction, updateServiceItemAction } from '@/modules/settings/actions'
 
 interface Props {
   item?: ServiceItem
+  tenantProfile: TenantProfile | null
 }
 
-export function ServiceForm({ item }: Props) {
+export function ServiceForm({ item, tenantProfile }: Props) {
   const router = useRouter()
+  const taxMode = tenantProfile?.tax_mode ?? null
 
   async function handleSubmit(formData: FormData) {
     if (item) {
@@ -57,15 +59,40 @@ export function ServiceForm({ item }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
-        <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 0)}
-          className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white">
-          <option value="0">0% — steuerbefreit §4 Nr. 14 (Heilberufe) / Kleinunternehmer §19</option>
-          <option value="19">19% — Regelbesteuerung</option>
-        </select>
-        <p className="mt-1 text-xs text-zinc-400">Relevant für Kleinunternehmer §19 und Heilberufe §4 Nr. 14 — wird beim Katalog-Picker in die Rechnung übernommen.</p>
-      </div>
+      {/* Umsatzsteuer — nur anzeigen wenn nicht Kleinunternehmer */}
+      {taxMode === 'kleinunternehmer' ? (
+        <input type="hidden" name="tax_rate" value="0" />
+      ) : taxMode === 'heilpraktiker_mix' ? (
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
+          <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 0)}
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white">
+            <option value="0">0% — Steuerbefreit §4 Nr. 14 (Heilberufe)</option>
+            <option value="19">19% — Regelbesteuerung</option>
+          </select>
+        </div>
+      ) : taxMode === 'regelbesteuerung_19' ? (
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
+          <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 19)}
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white">
+            <option value="19">19% — Regelbesteuerung</option>
+            <option value="7">7% — Ermäßigter Steuersatz</option>
+            <option value="0">0% — Steuerbefreit</option>
+          </select>
+        </div>
+      ) : (
+        /* Profil noch nicht gespeichert — neutrale Auswahl */
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
+          <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 0)}
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white">
+            <option value="0">0% — Steuerbefreit / Kleinunternehmer §19</option>
+            <option value="19">19% — Regelbesteuerung</option>
+          </select>
+          <p className="mt-1 text-xs text-zinc-400">Zuerst in Stammdaten die Umsatzsteuer-Einstellung hinterlegen.</p>
+        </div>
+      )}
 
       <label className="flex items-center gap-3 cursor-pointer">
         <input type="checkbox" name="is_default" value="true"

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { notFound } from 'next/navigation'
-import { getServiceItemById } from '@/modules/settings/queries'
+import { getServiceItemById, getTenantProfile } from '@/modules/settings/queries'
 import { ServiceForm } from '../service-form'
 
 interface Props {
@@ -10,7 +10,10 @@ interface Props {
 
 export default async function EditServicePage({ params }: Props) {
   const { id } = await params
-  const item = await getServiceItemById(id)
+  const [item, tenantProfile] = await Promise.all([
+    getServiceItemById(id),
+    getTenantProfile(),
+  ])
   if (!item) notFound()
 
   return (
@@ -24,7 +27,7 @@ export default async function EditServicePage({ params }: Props) {
         <p className="text-sm text-zinc-500">{item.name}</p>
       </div>
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <ServiceForm item={item} />
+        <ServiceForm item={item} tenantProfile={tenantProfile} />
       </div>
     </div>
   )
