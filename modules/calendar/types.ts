@@ -21,7 +21,7 @@ export interface CalendarEntry {
   client?: {
     id: string
     display_label: string
-    personal_data?: { name?: string }
+    personal_data?: { name?: string; email?: string }
   } | null
 }
 
@@ -29,6 +29,6 @@ export interface CalendarEntryWithClient extends CalendarEntry {
   client: {
     id: string
     display_label: string
-    personal_data?: { name?: string }
+    personal_data?: { name?: string; email?: string }
   } | null
 }

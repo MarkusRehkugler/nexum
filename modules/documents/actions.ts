@@ -21,9 +21,25 @@ export async function uploadDocumentAction(
   if (!file || file.size === 0) return { error: 'Keine Datei ausgewählt.' }
   if (file.size > 52_428_800) return { error: 'Datei zu groß (max. 50 MB).' }
 
+  const VALID_OWNER_TYPES = ['client', 'session', 'tenant']
   const ownerType = formData.get('owner_type') as string
-  const ownerId = formData.get('owner_id') as string
+  if (!VALID_OWNER_TYPES.includes(ownerType)) {
+    return { error: 'Ungültiger Besitzer-Typ.' }
+  }
+
+  let ownerId: string
+  if (ownerType === 'tenant') {
+    ownerId = profile.tenant_id
+  } else {
+    ownerId = formData.get('owner_id') as string
+    if (!ownerId) return { error: 'Fehlende Besitzer-ID.' }
+  }
+
+  const VALID_DOC_TYPES = ['einwilligung', 'vertrag', 'anamnese', 'rechnung', 'sonstiges']
   const docType = (formData.get('type') as string) || 'sonstiges'
+  if (!VALID_DOC_TYPES.includes(docType)) return { error: 'Ungültiger Dokumenttyp.' }
+
+  const notes = (formData.get('notes') as string) || null
 
   const ext = file.name.split('.').pop() ?? 'bin'
   const storagePath = `${profile.tenant_id}/${crypto.randomUUID()}.${ext}`
@@ -42,6 +58,7 @@ export async function uploadDocumentAction(
     filename:        file.name,
     mime_type:       file.type || null,
     file_size_bytes: file.size,
+    notes,
   })
 
   if (dbError) {
@@ -56,10 +73,20 @@ export async function uploadDocumentAction(
 
 export async function deleteDocumentAction(
   id: string,
-  storageKey: string,
   ownerId?: string
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+
+  // Storage-Key aus DB lesen — RLS stellt sicher, dass nur eigene Dokumente gelesen werden.
+  // Nicht vom Client übernehmen, da sonst DB-Delete und Storage-Delete auseinanderlaufen können.
+  const { data: doc, error: fetchError } = await supabase
+    .from('documents')
+    .select('storage_key')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .single()
+
+  if (fetchError || !doc) return { error: 'Dokument nicht gefunden.' }
 
   const { error } = await supabase
     .from('documents')
@@ -68,7 +95,7 @@ export async function deleteDocumentAction(
 
   if (error) return { error: error.message }
 
-  await supabase.storage.from('documents').remove([storageKey])
+  await supabase.storage.from('documents').remove([doc.storage_key])
 
   if (ownerId) revalidatePath(`/clients/${ownerId}`)
   revalidatePath('/documents')

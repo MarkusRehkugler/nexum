@@ -4,6 +4,7 @@ import { ChevronLeft, AlertTriangle } from 'lucide-react'
 import { getInvoiceById } from '@/modules/invoices/queries'
 import { getTenantProfile } from '@/modules/settings/queries'
 import { STATUS_LABELS, STATUS_CLASSES } from '@/modules/invoices/schemas'
+import { buildInvoiceMailtoUrl } from '@/modules/email/compose'
 import { InvoiceActions } from './invoice-actions'
 
 interface Props {
@@ -60,6 +61,19 @@ export default async function InvoiceDetailPage({ params }: Props) {
     .filter(Boolean).join(', ')
   const senderContact = [profile?.phone, profile?.email].filter(Boolean).join(' · ')
 
+  const mailtoUrl = clientEmail ? buildInvoiceMailtoUrl({
+    to: clientEmail,
+    clientName,
+    invoiceNumber: invoice.invoice_number,
+    totalGross: new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(Number(invoice.total_gross)),
+    invoiceDate: fmtDate(invoice.created_at),
+    dueDate: invoice.due_date ? fmtDate(invoice.due_date) : null,
+    senderName,
+    bankDetails: profile?.iban
+      ? [profile.bank_name, profile.iban && `IBAN: ${profile.iban}`, profile.bic && `BIC: ${profile.bic}`].filter(Boolean).join(' · ')
+      : null,
+  }) : undefined
+
   return (
     <div className="space-y-6">
       {/* Nav */}
@@ -68,7 +82,7 @@ export default async function InvoiceDetailPage({ params }: Props) {
           <ChevronLeft className="h-4 w-4" />
           Rechnungen
         </Link>
-        <InvoiceActions invoiceId={id} status={invoice.status} />
+        <InvoiceActions invoiceId={id} status={invoice.status} mailtoUrl={mailtoUrl} />
       </div>
 
       {/* Warnung: Stammdaten unvollständig */}

@@ -55,9 +55,18 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (!session) return NextResponse.json({ error: 'Sitzung nicht gefunden' }, { status: 404 })
 
+  const MAX_BYTES = 500 * 1024 * 1024 // 500 MB
+  const contentLength = req.headers.get('content-length')
+  if (contentLength && parseInt(contentLength) > MAX_BYTES) {
+    return NextResponse.json({ error: 'Datei zu groß (max. 500 MB)' }, { status: 413 })
+  }
+
   const arrayBuffer = await req.arrayBuffer()
   if (arrayBuffer.byteLength === 0) {
     return NextResponse.json({ error: 'Leere Datei' }, { status: 400 })
+  }
+  if (arrayBuffer.byteLength > MAX_BYTES) {
+    return NextResponse.json({ error: 'Datei zu groß (max. 500 MB)' }, { status: 413 })
   }
 
   const contentType = req.headers.get('content-type') ?? 'audio/webm'

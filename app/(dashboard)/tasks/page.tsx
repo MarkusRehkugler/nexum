@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { ListChecks } from 'lucide-react'
 import { getTasksByStatus } from '@/modules/tasks/queries'
+import { getClients } from '@/modules/clients/queries'
 import { TaskList } from './task-list'
+import { CreateTaskButton } from './create-task-button'
 
 interface Props {
   searchParams: Promise<{ status?: string }>
@@ -11,7 +13,10 @@ export default async function TasksPage({ searchParams }: Props) {
   const { status } = await searchParams
   const activeTab = (status === 'completed' || status === 'all') ? status : 'open'
 
-  const tasks = await getTasksByStatus(activeTab as 'open' | 'completed' | 'all')
+  const [tasks, clients] = await Promise.all([
+    getTasksByStatus(activeTab as 'open' | 'completed' | 'all'),
+    getClients(),
+  ])
 
   const tabs = [
     { key: 'open',      label: 'Offen' },
@@ -22,12 +27,21 @@ export default async function TasksPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Aufgaben</h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
-          Aufgaben aus KI-Sitzungsprotokollen und manuell erstellte Klient-Aufgaben
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900">Aufgaben</h1>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            KI-generierte und manuell erstellte Aufgaben
+          </p>
+        </div>
       </div>
+
+      {/* Neue Aufgabe */}
+      <CreateTaskButton clients={clients.map(c => ({
+        id:            c.id,
+        display_label: c.display_label,
+        personal_data: c.personal_data as { name?: string } | null,
+      }))} />
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1 w-fit">
@@ -54,7 +68,7 @@ export default async function TasksPage({ searchParams }: Props) {
             {activeTab === 'open' ? 'Keine offenen Aufgaben' : 'Keine Aufgaben'}
           </h3>
           <p className="mt-1 text-sm text-zinc-500">
-            Aufgaben werden aus dem KI-Sitzungsprotokoll übernommen.
+            Aufgaben werden aus KI-Sitzungsprotokollen übernommen oder manuell angelegt.
           </p>
         </div>
       ) : (

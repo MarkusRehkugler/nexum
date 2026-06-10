@@ -158,6 +158,20 @@ export function ProfileForm({ profile }: Props) {
         </div>
       </section>
 
+      {/* Praxis-Einstellungen */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm space-y-4">
+        <h2 className="text-base font-semibold text-zinc-900">Praxis-Einstellungen</h2>
+        <div className="max-w-xs">
+          <label className="block text-sm font-medium text-zinc-700 mb-1">Klienten-Bezeichnung</label>
+          <input name="client_label" defaultValue={profile?.client_label ?? 'Klient'}
+            placeholder="Klient"
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900" />
+          <p className="mt-1 text-xs text-zinc-400">
+            Wie werden deine Klienten in der App bezeichnet? z. B. „Patient", „Coachee", „Klient"
+          </p>
+        </div>
+      </section>
+
       <button type="submit" disabled={pending}
         className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 transition-colors disabled:opacity-50">
         {pending ? 'Speichern…' : 'Speichern'}

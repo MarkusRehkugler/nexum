@@ -27,6 +27,9 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .single()
 
   if (!session) return NextResponse.json({ error: 'Sitzung nicht gefunden' }, { status: 404 })
+  if (session.ai_processing_status === 'processing') {
+    return NextResponse.json({ error: 'KI-Verarbeitung läuft bereits' }, { status: 429 })
+  }
 
   const admin = createAdminClient()
 
@@ -86,9 +89,6 @@ export async function POST(_req: NextRequest, { params }: Params) {
   } catch (err) {
     console.error('Protocol generation error:', err)
     await supabase.from('sessions').update({ ai_processing_status: 'failed' }).eq('id', id)
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Protokoll-Generierung fehlgeschlagen' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Protokoll-Generierung fehlgeschlagen' }, { status: 500 })
   }
 }

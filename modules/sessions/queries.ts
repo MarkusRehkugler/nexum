@@ -1,10 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import type { SessionWithClient } from './types'
 
-export async function getSessions(): Promise<SessionWithClient[]> {
+export interface SessionFilters {
+  type?: string
+  clientId?: string
+  month?: string  // 'YYYY-MM'
+}
+
+export async function getSessions(filters?: SessionFilters): Promise<SessionWithClient[]> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('sessions')
     .select(`
       *,
@@ -21,12 +27,31 @@ export async function getSessions(): Promise<SessionWithClient[]> {
     .is('deleted_at', null)
     .order('session_date', { ascending: false })
 
+  if (filters?.type) {
+    query = query.eq('type', filters.type)
+  }
+
+  if (filters?.month) {
+    const [year, mon] = filters.month.split('-').map(Number)
+    const start = new Date(Date.UTC(year, mon - 1, 1)).toISOString()
+    const end   = new Date(Date.UTC(year, mon, 1)).toISOString()
+    query = query.gte('session_date', start).lt('session_date', end)
+  }
+
+  const { data, error } = await query
+
   if (error) {
     console.error('getSessions error:', error)
     return []
   }
 
-  return (data ?? []) as unknown as SessionWithClient[]
+  let sessions = (data ?? []) as unknown as SessionWithClient[]
+
+  if (filters?.clientId) {
+    sessions = sessions.filter(s => s.case?.client_id === filters.clientId)
+  }
+
+  return sessions
 }
 
 export async function getSessionById(id: string): Promise<SessionWithClient | null> {

@@ -26,11 +26,13 @@ export default async function DashboardLayout({
     user.email ??
     'Coach'
 
+  const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
+
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-50">
       {/* Desktop-Sidebar (ab lg) */}
       <div className="hidden lg:flex">
-        <Sidebar displayName={displayName} email={user.email ?? ''} />
+        <Sidebar displayName={displayName} email={user.email ?? ''} isAdmin={isAdmin} />
       </div>
 
       {/* Hauptinhalt */}

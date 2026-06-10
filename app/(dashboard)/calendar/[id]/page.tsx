@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft, Clock, User, AlignLeft, Calendar } from 'lucide-react'
+import { ChevronLeft, Clock, User, AlignLeft, Calendar, Mail } from 'lucide-react'
 import { getCalendarEntryById } from '@/modules/calendar/queries'
+import { getTenantProfile } from '@/modules/settings/queries'
 import { TYPE_LABELS, TYPE_COLORS } from '@/modules/calendar/schemas'
+import { buildAppointmentConfirmationMailtoUrl, buildAppointmentReminderMailtoUrl } from '@/modules/email/compose'
 import { AppointmentActions } from './appointment-actions'
 
 interface Props {
@@ -33,14 +35,42 @@ function durationMinutes(startsAt: string, endsAt: string): number {
 
 export default async function AppointmentDetailPage({ params }: Props) {
   const { id } = await params
-  const entry = await getCalendarEntryById(id)
+  const [entry, profile] = await Promise.all([
+    getCalendarEntryById(id),
+    getTenantProfile(),
+  ])
 
   if (!entry) notFound()
 
   const clientName = entry.client?.personal_data?.name ?? entry.client?.display_label
+  const clientEmail = entry.client?.personal_data?.email as string | undefined
   const duration = durationMinutes(entry.starts_at, entry.ends_at)
   const typeClass = TYPE_COLORS[entry.type] ?? TYPE_COLORS.event
   const typeLabel = TYPE_LABELS[entry.type] ?? entry.type
+
+  const senderName = [profile?.company_name, profile?.first_name && profile?.last_name
+    ? `${profile.first_name} ${profile.last_name}` : null]
+    .filter(Boolean).join(' · ') || 'Ihre Praxis'
+
+  const confirmationMailtoUrl = clientEmail && clientName ? buildAppointmentConfirmationMailtoUrl({
+    to: clientEmail,
+    clientName,
+    title: entry.title,
+    typeLabel,
+    dateTime: formatDateTime(entry.starts_at),
+    endTime: formatTime(entry.ends_at),
+    durationMinutes: duration,
+    senderName,
+  }) : undefined
+
+  const reminderMailtoUrl = clientEmail && clientName ? buildAppointmentReminderMailtoUrl({
+    to: clientEmail,
+    clientName,
+    title: entry.title,
+    dateTime: formatDateTime(entry.starts_at),
+    endTime: formatTime(entry.ends_at),
+    senderName,
+  }) : undefined
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -58,6 +88,30 @@ export default async function AppointmentDetailPage({ params }: Props) {
           durationMinutes={duration}
         />
       </div>
+
+      {/* E-Mail-Aktionen */}
+      {(confirmationMailtoUrl || reminderMailtoUrl) && (
+        <div className="flex items-center gap-2">
+          {confirmationMailtoUrl && (
+            <a
+              href={confirmationMailtoUrl}
+              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-300 hover:shadow-sm transition-all"
+            >
+              <Mail className="h-4 w-4" />
+              Bestätigung senden
+            </a>
+          )}
+          {reminderMailtoUrl && (
+            <a
+              href={reminderMailtoUrl}
+              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-300 hover:shadow-sm transition-all"
+            >
+              <Mail className="h-4 w-4" />
+              Erinnerung senden
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Detail-Karte */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm space-y-5">

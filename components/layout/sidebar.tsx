@@ -10,6 +10,7 @@ import {
   Receipt,
   ListChecks,
   FolderOpen,
+  Shield,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -29,9 +30,10 @@ const navItems = [
 interface Props {
   displayName: string
   email: string
+  isAdmin?: boolean
 }
 
-export function Sidebar({ displayName, email }: Props) {
+export function Sidebar({ displayName, email, isAdmin }: Props) {
   const pathname = usePathname()
 
   return (
@@ -67,6 +69,20 @@ export function Sidebar({ displayName, email }: Props) {
 
       {/* User + Einstellungen */}
       <div className="border-t border-zinc-200 p-3 space-y-0.5">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              pathname.startsWith('/admin')
+                ? 'bg-violet-50 text-violet-700'
+                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'
+            )}
+          >
+            <Shield className="h-4 w-4 shrink-0" />
+            Admin
+          </Link>
+        )}
         <Link
           href="/settings"
           className={cn(

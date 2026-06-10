@@ -19,6 +19,7 @@ export async function saveTenantProfileAction(
     .single()
   if (!profile) return { error: 'Tenant nicht gefunden' }
 
+  const clientLabelRaw = formData.get('client_label') as string
   const payload = {
     tenant_id: profile.tenant_id,
     company_name:        formData.get('company_name') as string || null,
@@ -40,6 +41,7 @@ export async function saveTenantProfileAction(
     invoice_prefix:      formData.get('invoice_prefix') as string || 'RE',
     invoice_notes:       formData.get('invoice_notes') as string || null,
     payment_terms_days:  parseInt(formData.get('payment_terms_days') as string) || 14,
+    client_label:        clientLabelRaw?.trim() || 'Klient',
   }
 
   const { error } = await supabase

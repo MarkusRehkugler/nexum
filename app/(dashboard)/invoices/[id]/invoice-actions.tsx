@@ -2,15 +2,16 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Printer, CheckCircle, Send, Loader2 } from 'lucide-react'
+import { Printer, CheckCircle, Send, Mail, Loader2 } from 'lucide-react'
 import { markInvoicePaidAction, markInvoiceSentAction } from '@/modules/invoices/actions'
 
 interface Props {
   invoiceId: string
   status: string
+  mailtoUrl?: string
 }
 
-export function InvoiceActions({ invoiceId, status }: Props) {
+export function InvoiceActions({ invoiceId, status, mailtoUrl }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
 
@@ -38,6 +39,17 @@ export function InvoiceActions({ invoiceId, status }: Props) {
         <Printer className="h-4 w-4" />
         Drucken / PDF
       </button>
+
+      {/* Per E-Mail senden */}
+      {mailtoUrl && (
+        <a
+          href={mailtoUrl}
+          className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-300 hover:shadow-sm transition-all"
+        >
+          <Mail className="h-4 w-4" />
+          Per E-Mail senden
+        </a>
+      )}
 
       {/* Als versendet markieren */}
       {status === 'draft' && (

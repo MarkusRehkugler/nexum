@@ -43,9 +43,9 @@ export function DocumentsSection({ clientId, initialDocuments }: Props) {
     })
   }
 
-  function handleDelete(id: string, storageKey: string) {
+  function handleDelete(id: string) {
     startDelete(async () => {
-      await deleteDocumentAction(id, storageKey, clientId)
+      await deleteDocumentAction(id, clientId)
       setConfirmDeleteId(null)
       router.refresh()
     })
@@ -90,6 +90,17 @@ export function DocumentsSection({ clientId, initialDocuments }: Props) {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1">
+                Kommentar <span className="text-zinc-400">(optional)</span>
+              </label>
+              <input
+                name="notes"
+                type="text"
+                placeholder="z. B. Erstgespräch vom 01.01.2026, Version 2"
+                className="block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+              />
             </div>
             {uploadError && (
               <p className="text-xs text-red-600">{uploadError}</p>
@@ -137,6 +148,9 @@ export function DocumentsSection({ clientId, initialDocuments }: Props) {
                     day: '2-digit', month: 'short', year: 'numeric',
                   })}
                 </p>
+                {doc.notes && (
+                  <p className="text-xs text-zinc-500 mt-0.5 truncate">{doc.notes}</p>
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {doc.signedUrl && (
@@ -154,7 +168,7 @@ export function DocumentsSection({ clientId, initialDocuments }: Props) {
                 {confirmDeleteId === doc.id ? (
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => handleDelete(doc.id, doc.storage_key)}
+                      onClick={() => handleDelete(doc.id)}
                       disabled={deleting}
                       className="rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                     >

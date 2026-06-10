@@ -1,6 +1,30 @@
 import { createClient } from '@/lib/supabase/server'
 import type { DocumentWithUrl, DocumentWithOwner, DocumentRecord } from './types'
 
+export async function getTenantOwnDocuments(): Promise<DocumentWithUrl[]> {
+  const supabase = await createClient()
+
+  const { data: docs } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('owner_type', 'tenant')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+
+  if (!docs?.length) return []
+
+  const { data: urlData } = await supabase.storage
+    .from('documents')
+    .createSignedUrls(docs.map(d => d.storage_key), 3600)
+
+  const urlMap = new Map(urlData?.map(u => [u.path, u.signedUrl]) ?? [])
+
+  return docs.map(doc => ({
+    ...(doc as DocumentRecord),
+    signedUrl: urlMap.get(doc.storage_key) ?? null,
+  }))
+}
+
 export async function getDocumentsWithSignedUrls(
   ownerType: string,
   ownerId: string

@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { getSessions } from '@/modules/sessions/queries'
+import { getClients } from '@/modules/clients/queries'
 import { SESSION_TYPE_LABELS } from '@/modules/sessions/schemas'
+import { SessionFilters } from './session-filters'
 import { FileText, Plus, Mic } from 'lucide-react'
 
 function statusLabel(s: string) {
@@ -25,8 +28,20 @@ function aiStatusDot(s: string) {
     : '⚪'
 }
 
-export default async function SessionsPage() {
-  const sessions = await getSessions()
+interface Props {
+  searchParams: Promise<{ type?: string; clientId?: string; month?: string }>
+}
+
+export default async function SessionsPage({ searchParams }: Props) {
+  const filters = await searchParams
+  const [sessions, clients] = await Promise.all([
+    getSessions({
+      type:     filters.type,
+      clientId: filters.clientId,
+      month:    filters.month,
+    }),
+    getClients(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -48,20 +63,31 @@ export default async function SessionsPage() {
         </Link>
       </div>
 
+      <Suspense>
+        <SessionFilters clients={clients.map(c => ({
+          id:            c.id,
+          display_label: c.display_label,
+          personal_data: c.personal_data as { name?: string } | null,
+        }))} />
+      </Suspense>
+
       {sessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
           <FileText className="mb-3 h-8 w-8 text-zinc-300" />
-          <p className="text-sm font-medium text-zinc-600">Noch keine Sitzungen</p>
+          <p className="text-sm font-medium text-zinc-600">Keine Sitzungen gefunden</p>
           <p className="mt-1 text-xs text-zinc-400">
-            Lege die erste Sitzung an und starte die KI-Dokumentation.
+            Filter anpassen oder{' '}
+            <Link href="/sessions/new" className="underline text-zinc-600">neue Sitzung anlegen</Link>.
           </p>
-          <Link
-            href="/sessions/new"
-            className="mt-4 flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
-          >
-            <Mic className="h-4 w-4" />
-            Erste Sitzung anlegen
-          </Link>
+          {!filters.type && !filters.clientId && !filters.month && (
+            <Link
+              href="/sessions/new"
+              className="mt-4 flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
+            >
+              <Mic className="h-4 w-4" />
+              Erste Sitzung anlegen
+            </Link>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">

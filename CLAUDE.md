@@ -76,13 +76,13 @@ supabase/
 | M07 | Formulare & Assessments | — |
 | M08 | Sitzungsdokumentation | ✅ fertig |
 | M11 | KI-Protokollierung | ✅ fertig + getestet |
-| M14 | E-Mail-Kommunikation | — |
+| M14 | E-Mail-Kommunikation | ✅ fertig (mailto:) |
 | M15 | Dokumentenverwaltung | ✅ fertig |
 | M18 | Kalender & Termine | ✅ fertig |
 | M28 | Mobile / PWA | ✅ fertig |
 | M38 | KPI-Dashboard | ✅ fertig |
 | M20 | Rechnungsmodul (basic) | ✅ fertig |
-| M41 | SaaS-Admin | schema ✓ |
+| M41 | SaaS-Admin | ✅ fertig |
 
 ## Nächste Schritte
 
@@ -95,4 +95,17 @@ supabase/
 7. ~~M20 Rechnungsmodul (PDF-Rechnung)~~ ✅
 8. ~~M18 Kalender & Terminbuchung~~ ✅
 9. ~~M09 Aufgaben-Modul~~ ✅
-10. **Nächste Optionen:** M04 Consent | Vercel-Deployment
+10. ~~7 Feature-Verbesserungen (Migration 008)~~ ✅
+11. **Nächste Optionen:** M04 Consent | Vercel-Deployment
+
+## Feature-Stand nach Migration 008
+
+| Feature | Beschreibung |
+|---|---|
+| Erweiterte Klientenfelder | Anrede, Vor/Nachname, Geb.-Datum, Mobil, Festnetz, Notfallkontakt |
+| Dokument-Kommentare | `documents.notes TEXT` — beim Hochladen + Anzeige |
+| Sitzungsfilter | Typ, Klient, Monat via URL-Params `/sessions?type=&clientId=&month=` |
+| Manuelle Aufgaben | `createManualTaskAction` — ohne Klient-Verknüpfung möglich |
+| Dokumentenbibliothek | `/documents` zeigt nur tenant-eigene Vorlagen (owner_type=tenant) |
+| Klienten-Bezeichnung | `tenant_profiles.client_label` — konfigurierbar in Stammdaten |
+| Klienten-Verlauf | Journal-Section in Klientenakte (Termine + Sitzungen + Rechnungen) |

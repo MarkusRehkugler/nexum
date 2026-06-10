@@ -8,6 +8,7 @@ export interface DocumentRecord {
   filename: string | null
   mime_type: string | null
   file_size_bytes: number | null
+  notes: string | null
   version: number
   retention_until: string | null
   created_at: string
