@@ -4,12 +4,13 @@ export const lineItemSchema = z.object({
   description: z.string().min(1, { message: 'Beschreibung fehlt.' }).max(200),
   quantity: z.coerce.number().positive({ message: 'Menge muss > 0 sein.' }),
   unitPrice: z.coerce.number().min(0, { message: 'Preis darf nicht negativ sein.' }),
+  taxRate: z.coerce.number().min(0).max(100).optional(),
 })
 
 export const createInvoiceSchema = z.object({
   clientId: z.string().uuid({ message: 'Klient ist erforderlich.' }),
   lineItems: z.array(lineItemSchema).min(1, { message: 'Mindestens eine Position erforderlich.' }),
-  taxMode: z.enum(['none', 'included', 'excluded']).default('none'),
+  taxMode: z.enum(['none', 'included', 'excluded', 'per_item']).default('none'),
   taxRate: z.coerce.number().min(0).max(100).default(0),
   dueDate: z.string().optional().or(z.literal('')),
   notes: z.string().max(1000).optional().or(z.literal('')),

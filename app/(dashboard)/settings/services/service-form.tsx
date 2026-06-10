@@ -58,13 +58,13 @@ export function ServiceForm({ item }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 mb-1">MwSt-Satz (%)</label>
+        <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
         <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 0)}
           className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 bg-white">
-          <option value="0">0% (steuerbefreit / Kleinunternehmer)</option>
-          <option value="7">7%</option>
-          <option value="19">19%</option>
+          <option value="0">0% — steuerbefreit §4 Nr. 14 (Heilberufe) / Kleinunternehmer §19</option>
+          <option value="19">19% — Regelbesteuerung</option>
         </select>
+        <p className="mt-1 text-xs text-zinc-400">Relevant für Kleinunternehmer §19 und Heilberufe §4 Nr. 14 — wird beim Katalog-Picker in die Rechnung übernommen.</p>
       </div>
 
       <label className="flex items-center gap-3 cursor-pointer">

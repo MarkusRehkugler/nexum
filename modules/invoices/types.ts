@@ -1,11 +1,12 @@
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'canceled'
-export type TaxMode = 'none' | 'included' | 'excluded'
+export type TaxMode = 'none' | 'included' | 'excluded' | 'per_item'
 
 export interface LineItem {
   description: string
   quantity: number
   unitPrice: number   // in EUR (decimal)
   total: number       // quantity * unitPrice
+  taxRate?: number    // für per_item-Modus: Steuersatz je Position (0 oder 19)
 }
 
 export interface InvoiceRecord {

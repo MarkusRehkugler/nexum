@@ -22,11 +22,13 @@ export async function createInvoiceAction(
   const descriptions = formData.getAll('item_description') as string[]
   const quantities = formData.getAll('item_quantity') as string[]
   const unitPrices = formData.getAll('item_unitPrice') as string[]
+  const itemTaxRates = formData.getAll('item_taxRate') as string[]
 
   const lineItems = descriptions.map((desc, i) => ({
     description: desc,
     quantity: Number(quantities[i] ?? 1),
     unitPrice: Number(unitPrices[i] ?? 0),
+    taxRate: itemTaxRates[i] !== undefined ? Number(itemTaxRates[i]) : undefined,
   }))
 
   const raw = {
@@ -64,11 +66,16 @@ export async function createInvoiceAction(
     quantity: item.quantity,
     unitPrice: item.unitPrice,
     total: Math.round(item.quantity * item.unitPrice * 100) / 100,
+    taxRate: item.taxRate,
   }))
 
   const subtotalNet = computedItems.reduce((s, i) => s + i.total, 0)
-  const taxAmount = taxMode === 'none' ? 0 : Math.round(subtotalNet * (taxRate / 100) * 100) / 100
-  const totalGross = subtotalNet + (taxMode === 'excluded' ? taxAmount : 0)
+  const taxAmount = taxMode === 'per_item'
+    ? computedItems.reduce((s, i) => s + Math.round(i.total * ((i.taxRate ?? 0) / 100) * 100) / 100, 0)
+    : taxMode === 'none'
+      ? 0
+      : Math.round(subtotalNet * (taxRate / 100) * 100) / 100
+  const totalGross = subtotalNet + (taxMode === 'excluded' || taxMode === 'per_item' ? taxAmount : 0)
 
   const invoiceNumber = await getNextInvoiceNumber(profile.tenant_id)
 

@@ -12,6 +12,7 @@ interface LineItemRow {
   description: string
   quantity: string
   unitPrice: string
+  taxRate: string
 }
 
 interface Props {
@@ -29,14 +30,12 @@ function formatEUR(val: string) {
 
 function initTaxMode(profile: TenantProfile | null): string {
   if (!profile) return 'none'
-  const m = profile.tax_mode
-  if (m === 'regelbesteuerung_19' || m === 'regelbesteuerung_7') return 'excluded'
+  if (profile.tax_mode === 'regelbesteuerung_19') return 'excluded'
+  if (profile.tax_mode === 'heilpraktiker_mix') return 'per_item'
   return 'none'
 }
 
 function initTaxRate(profile: TenantProfile | null): string {
-  if (!profile) return '19'
-  if (profile.tax_mode === 'regelbesteuerung_7') return '7'
   return '19'
 }
 
@@ -49,14 +48,14 @@ export function CreateInvoiceForm({
 }: Props) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialState)
   const [items, setItems] = useState<LineItemRow[]>([
-    { description: defaultDescription ?? '', quantity: '1', unitPrice: '' },
+    { description: defaultDescription ?? '', quantity: '1', unitPrice: '', taxRate: '0' },
   ])
   const [taxMode, setTaxMode] = useState(() => initTaxMode(tenantProfile))
   const [taxRate, setTaxRate] = useState(() => initTaxRate(tenantProfile))
   const [catalogOpenIdx, setCatalogOpenIdx] = useState<number | null>(null)
 
   function addItem() {
-    setItems((prev) => [...prev, { description: '', quantity: '1', unitPrice: '' }])
+    setItems((prev) => [...prev, { description: '', quantity: '1', unitPrice: '', taxRate: '0' }])
   }
 
   function removeItem(idx: number) {
@@ -71,11 +70,18 @@ export function CreateInvoiceForm({
   function applyServiceItem(idx: number, si: ServiceItem) {
     setItems((prev) => prev.map((item, i) =>
       i === idx
-        ? { ...item, description: si.name, unitPrice: si.unit_price.toFixed(2).replace('.', ',') }
+        ? {
+            ...item,
+            description: si.name,
+            unitPrice: si.unit_price.toFixed(2).replace('.', ','),
+            taxRate: si.tax_rate.toString(),
+          }
         : item
     ))
     setCatalogOpenIdx(null)
   }
+
+  const isPerItem = taxMode === 'per_item'
 
   // Live-Summe
   const subtotal = items.reduce((s, item) => {
@@ -83,8 +89,19 @@ export function CreateInvoiceForm({
     const price = formatEUR(item.unitPrice)
     return s + qty * price
   }, 0)
-  const taxAmount = taxMode === 'none' ? 0 : subtotal * (parseFloat(taxRate) / 100)
-  const total = taxMode === 'excluded' ? subtotal + taxAmount : subtotal
+
+  const taxAmount = isPerItem
+    ? items.reduce((s, item) => {
+        const qty = parseFloat(item.quantity) || 0
+        const price = formatEUR(item.unitPrice)
+        const rate = parseFloat(item.taxRate) || 0
+        return s + qty * price * (rate / 100)
+      }, 0)
+    : taxMode === 'none'
+      ? 0
+      : subtotal * (parseFloat(taxRate) / 100)
+
+  const total = taxMode === 'excluded' || isPerItem ? subtotal + taxAmount : subtotal
 
   function fmtEUR(n: number) {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
@@ -96,6 +113,8 @@ export function CreateInvoiceForm({
   const defaultDueStr = defaultDue.toISOString().split('T')[0]
 
   const defaultNotes = tenantProfile?.invoice_notes ?? ''
+
+  const inputCls = 'rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50'
 
   return (
     <>
@@ -121,7 +140,7 @@ export function CreateInvoiceForm({
             defaultValue={defaultClientId ?? ''}
             required
             disabled={pending}
-            className="block w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+            className={`block w-full ${inputCls} px-3.5 py-2.5`}
           >
             <option value="" disabled>Klient wählen …</option>
             {clients.map((c) => (
@@ -153,17 +172,18 @@ export function CreateInvoiceForm({
 
           <div className="space-y-2">
             {/* Header */}
-            <div className="grid grid-cols-12 gap-2 text-xs font-medium text-zinc-400 px-1">
-              <span className="col-span-6">Beschreibung</span>
+            <div className={`grid gap-2 text-xs font-medium text-zinc-400 px-1 ${isPerItem ? 'grid-cols-12' : 'grid-cols-12'}`}>
+              <span className={isPerItem ? 'col-span-4' : 'col-span-6'}>Beschreibung</span>
               <span className="col-span-2">Menge</span>
-              <span className="col-span-3">Preis (€)</span>
+              <span className={isPerItem ? 'col-span-2' : 'col-span-3'}>Preis (€)</span>
+              {isPerItem && <span className="col-span-3">MwSt.</span>}
               <span className="col-span-1" />
             </div>
 
             {items.map((item, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                 {/* Beschreibung + Katalog-Picker */}
-                <div className="col-span-6 relative flex gap-1">
+                <div className={`relative flex gap-1 ${isPerItem ? 'col-span-4' : 'col-span-6'}`}>
                   <input
                     type="text"
                     name="item_description"
@@ -172,7 +192,7 @@ export function CreateInvoiceForm({
                     placeholder="z. B. Coaching-Sitzung 60 min"
                     required
                     disabled={pending}
-                    className="flex-1 min-w-0 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+                    className={`flex-1 min-w-0 ${inputCls}`}
                   />
                   {serviceItems.length > 0 && (
                     <div className="relative z-50">
@@ -199,6 +219,7 @@ export function CreateInvoiceForm({
                               <span className="text-sm font-medium text-zinc-900">{si.name}</span>
                               <span className="text-xs text-zinc-400">
                                 {si.unit_price.toFixed(2).replace('.', ',')} € / {si.unit}
+                                {si.tax_rate === 0 ? ' · steuerbefreit' : ` · ${si.tax_rate}% MwSt.`}
                               </span>
                             </button>
                           ))}
@@ -217,18 +238,35 @@ export function CreateInvoiceForm({
                   step="any"
                   required
                   disabled={pending}
-                  className="col-span-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+                  className={`col-span-2 ${inputCls}`}
                 />
                 <input
                   type="text"
                   name="item_unitPrice"
                   value={item.unitPrice}
                   onChange={(e) => updateItem(idx, 'unitPrice', e.target.value)}
-                  placeholder="120,00"
+                  placeholder="0,00"
                   required
                   disabled={pending}
-                  className="col-span-3 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+                  className={`${isPerItem ? 'col-span-2' : 'col-span-3'} ${inputCls}`}
                 />
+
+                {/* Per-item Steuersatz */}
+                {isPerItem && (
+                  <>
+                    <input type="hidden" name="item_taxRate" value={item.taxRate} />
+                    <select
+                      value={item.taxRate}
+                      onChange={(e) => updateItem(idx, 'taxRate', e.target.value)}
+                      disabled={pending}
+                      className={`col-span-3 ${inputCls} text-xs`}
+                    >
+                      <option value="0">0% – §4 Nr. 14</option>
+                      <option value="19">19% MwSt.</option>
+                    </select>
+                  </>
+                )}
+
                 {items.length > 1 && (
                   <button
                     type="button"
@@ -250,7 +288,7 @@ export function CreateInvoiceForm({
             </div>
             {taxMode !== 'none' && (
               <div className="flex justify-between text-zinc-500 text-xs mt-0.5">
-                <span>MwSt. {taxRate}%</span>
+                <span>{isPerItem ? 'Umsatzsteuer (je Position)' : `MwSt. ${taxRate}%`}</span>
                 <span>{fmtEUR(taxAmount)}</span>
               </div>
             )}
@@ -261,11 +299,11 @@ export function CreateInvoiceForm({
           </div>
         </div>
 
-        {/* Steuer */}
+        {/* Umsatzsteuer */}
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className={isPerItem ? 'col-span-2' : 'col-span-1'}>
             <label htmlFor="taxMode" className="block text-sm font-medium text-zinc-700 mb-1.5">
-              Steuer
+              Umsatzsteuer
             </label>
             <select
               id="taxMode"
@@ -273,14 +311,20 @@ export function CreateInvoiceForm({
               value={taxMode}
               onChange={(e) => setTaxMode(e.target.value)}
               disabled={pending}
-              className="block w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+              className={`block w-full ${inputCls} px-3.5 py-2.5`}
             >
-              <option value="none">Keine (Kleinunternehmer)</option>
-              <option value="excluded">MwSt. zzgl.</option>
-              <option value="included">MwSt. inkl.</option>
+              <option value="none">Keine – Kleinunternehmer §19 UStG</option>
+              <option value="excluded">19% MwSt. zzgl.</option>
+              <option value="included">MwSt. inklusive</option>
+              <option value="per_item">Teilweise §4 Nr. 14 – je Position</option>
             </select>
+            {isPerItem && (
+              <p className="mt-1 text-xs text-zinc-400">
+                Steuersatz wird je Position festgelegt. Aus dem Katalog wird der Satz automatisch übernommen.
+              </p>
+            )}
           </div>
-          {taxMode !== 'none' && (
+          {!isPerItem && taxMode !== 'none' && (
             <div>
               <label htmlFor="taxRate" className="block text-sm font-medium text-zinc-700 mb-1.5">
                 MwSt.-Satz (%)
@@ -294,11 +338,11 @@ export function CreateInvoiceForm({
                 min={0}
                 max={100}
                 disabled={pending}
-                className="block w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+                className={`block w-full ${inputCls} px-3.5 py-2.5`}
               />
             </div>
           )}
-          <input type="hidden" name="taxRate" value={taxMode === 'none' ? '0' : taxRate} />
+          <input type="hidden" name="taxRate" value={isPerItem || taxMode === 'none' ? '0' : taxRate} />
         </div>
 
         {/* Fälligkeitsdatum */}
@@ -312,7 +356,7 @@ export function CreateInvoiceForm({
             type="date"
             defaultValue={defaultDueStr}
             disabled={pending}
-            className="block w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
+            className={`block w-full ${inputCls} px-3.5 py-2.5`}
           />
         </div>
 
@@ -329,7 +373,7 @@ export function CreateInvoiceForm({
             defaultValue={defaultNotes}
             placeholder="z. B. Zahlbar per Überweisung. Vielen Dank!"
             disabled={pending}
-            className="block w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 resize-none"
+            className={`block w-full ${inputCls} px-3.5 py-2.5 resize-none`}
           />
         </div>
 
