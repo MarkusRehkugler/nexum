@@ -214,7 +214,7 @@ export function CreateInvoiceForm({
                   value={item.quantity}
                   onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
                   min={0.1}
-                  step={0.5}
+                  step="any"
                   required
                   disabled={pending}
                   className="col-span-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50"
