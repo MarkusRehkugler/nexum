@@ -9,6 +9,7 @@ import {
   FileText,
   Receipt,
   ListChecks,
+  FolderOpen,
   Settings,
   LogOut,
 } from 'lucide-react'
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/calendar', label: 'Kalender', icon: CalendarDays },
   { href: '/tasks', label: 'Aufgaben', icon: ListChecks },
   { href: '/invoices', label: 'Rechnungen', icon: Receipt },
+  { href: '/documents', label: 'Dokumente', icon: FolderOpen },
 ]
 
 interface Props {

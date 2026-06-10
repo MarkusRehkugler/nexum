@@ -77,7 +77,7 @@ supabase/
 | M08 | Sitzungsdokumentation | ✅ fertig |
 | M11 | KI-Protokollierung | ✅ fertig + getestet |
 | M14 | E-Mail-Kommunikation | — |
-| M15 | Dokumentenverwaltung | schema ✓ |
+| M15 | Dokumentenverwaltung | ✅ fertig |
 | M18 | Kalender & Termine | ✅ fertig |
 | M28 | Mobile / PWA | ✅ fertig |
 | M38 | KPI-Dashboard | ✅ fertig |

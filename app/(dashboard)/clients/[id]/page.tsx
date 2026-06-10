@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Mail, Phone, FileText, Receipt, CalendarDays } from 'lucide-react'
 import { getClientById } from '@/modules/clients/queries'
+import { getDocumentsWithSignedUrls } from '@/modules/documents/queries'
 import { ConsentPanel } from './consent-panel'
+import { DocumentsSection } from './documents-section'
 import type { ConsentRecord } from '@/modules/consent/types'
 import { DEFAULT_CONSENT } from '@/modules/consent/types'
 
@@ -30,7 +32,10 @@ function statusClass(status: string) {
 
 export default async function ClientDetailPage({ params }: Props) {
   const { id } = await params
-  const client = await getClientById(id)
+  const [client, documents] = await Promise.all([
+    getClientById(id),
+    getDocumentsWithSignedUrls('client', id),
+  ])
 
   if (!client) notFound()
 
@@ -118,6 +123,9 @@ export default async function ClientDetailPage({ params }: Props) {
 
       {/* Einwilligungen (DSGVO) */}
       <ConsentPanel clientId={id} consent={consent} />
+
+      {/* Dokumente */}
+      <DocumentsSection clientId={id} initialDocuments={documents} />
     </div>
   )
 }
