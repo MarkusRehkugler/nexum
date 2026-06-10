@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { getClients } from '@/modules/clients/queries'
+import { getServiceItems, getTenantProfile } from '@/modules/settings/queries'
 import { CreateInvoiceForm } from './create-invoice-form'
 
 interface Props {
@@ -9,7 +10,11 @@ interface Props {
 
 export default async function NewInvoicePage({ searchParams }: Props) {
   const { clientId, description } = await searchParams
-  const clients = await getClients()
+  const [clients, serviceItems, tenantProfile] = await Promise.all([
+    getClients(),
+    getServiceItems(),
+    getTenantProfile(),
+  ])
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -28,6 +33,8 @@ export default async function NewInvoicePage({ searchParams }: Props) {
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <CreateInvoiceForm
           clients={clients}
+          serviceItems={serviceItems}
+          tenantProfile={tenantProfile}
           defaultClientId={clientId}
           defaultDescription={description}
         />
