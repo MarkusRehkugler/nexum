@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { transcribeAudio } from '@/lib/ai/transcribe'
 
+export const maxDuration = 300
+
 const BUCKET = 'session-audio'
 
 interface Params {
@@ -18,11 +20,26 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   const { data: session } = await supabase
     .from('sessions')
-    .select('audio_storage_key, tenant_id, ai_processing_status')
+    .select(`
+      audio_storage_key, tenant_id, ai_processing_status,
+      case:cases(client:clients(consent_records))
+    `)
     .eq('id', id)
     .single()
 
   if (!session) return NextResponse.json({ error: 'Sitzung nicht gefunden' }, { status: 404 })
+
+  // DSGVO Art. 9: KI-Verarbeitung nur mit expliziter Einwilligung
+  const clientConsent = (session.case as unknown as {
+    client?: { consent_records?: { ai_processing?: boolean } }
+  } | null)?.client?.consent_records
+  if (!clientConsent?.ai_processing) {
+    return NextResponse.json(
+      { error: 'KI-Verarbeitung nicht erlaubt — bitte zuerst die Einwilligung des Klienten dokumentieren.' },
+      { status: 403 }
+    )
+  }
+
   if (!session.audio_storage_key) {
     return NextResponse.json({ error: 'Keine Aufnahme vorhanden — erst Audio hochladen' }, { status: 400 })
   }

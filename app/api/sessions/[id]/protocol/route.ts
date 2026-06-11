@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { generateSessionProtocol } from '@/lib/ai/protocol'
 
+export const maxDuration = 300
+
 interface Params {
   params: Promise<{ id: string }>
 }
@@ -20,13 +22,25 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .select(`
       tenant_id, ai_processing_status,
       case:cases(
-        client:clients(display_label, personal_data)
+        client:clients(display_label, personal_data, consent_records)
       )
     `)
     .eq('id', id)
     .single()
 
   if (!session) return NextResponse.json({ error: 'Sitzung nicht gefunden' }, { status: 404 })
+
+  // DSGVO Art. 9: KI-Verarbeitung nur mit expliziter Einwilligung
+  const caseData = session.case as unknown as {
+    client?: { display_label?: string; personal_data?: { name?: string }; consent_records?: { ai_processing?: boolean } }
+  } | null
+  if (!caseData?.client?.consent_records?.ai_processing) {
+    return NextResponse.json(
+      { error: 'KI-Verarbeitung nicht erlaubt — bitte zuerst die Einwilligung des Klienten dokumentieren.' },
+      { status: 403 }
+    )
+  }
+
   if (session.ai_processing_status === 'processing') {
     return NextResponse.json({ error: 'KI-Verarbeitung läuft bereits' }, { status: 429 })
   }
@@ -51,8 +65,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
   await supabase.from('sessions').update({ ai_processing_status: 'processing' }).eq('id', id)
 
   try {
-    // Client-Name für Anonymisierung
-    const caseData = session.case as unknown as { client?: { display_label?: string; personal_data?: { name?: string } } } | null
+    // Client-Name für Anonymisierung (caseData bereits oben deklariert)
     const clientName = caseData?.client?.personal_data?.name ?? caseData?.client?.display_label
 
     // Profil für Coach-Name laden
