@@ -5,7 +5,7 @@ import { createInvoiceAction, type CreateInvoiceState } from '@/modules/invoices
 import type { ClientRecord } from '@/modules/clients/types'
 import type { ServiceItem, TenantProfile } from '@/modules/settings/types'
 import type { GebuhPosition } from '@/modules/invoices/types'
-import { Plus, Trash2, BookOpen, Stethoscope, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, BookOpen, Stethoscope, ChevronDown, Search } from 'lucide-react'
 
 const initialState: CreateInvoiceState = {}
 
@@ -50,6 +50,7 @@ export function CreateInvoiceForm({
   const [catalogOpenIdx, setCatalogOpenIdx] = useState<number | null>(null)
   const [catalogTab, setCatalogTab]     = useState<'service' | 'gebuh'>('service')
   const [gebuhExpanded, setGebuhExpanded] = useState<string | null>(null)
+  const [gebuhSearch, setGebuhSearch]     = useState('')
 
   function addItem() {
     setItems((prev) => [...prev, { description: '', quantity: '1', unitPrice: '', taxRate: '0' }])
@@ -115,8 +116,15 @@ export function CreateInvoiceForm({
 
   const inputCls = 'rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50'
 
-  // GebüH gruppiert nach Kategorie
-  const gebuhGroups = gebuhPositions.reduce<Record<string, GebuhPosition[]>>((acc, pos) => {
+  // GebüH: Suche + Gruppierung
+  const gebuhFiltered = gebuhSearch.trim()
+    ? gebuhPositions.filter(p =>
+        p.ziffer.toLowerCase().startsWith(gebuhSearch.toLowerCase()) ||
+        p.kurztext.toLowerCase().includes(gebuhSearch.toLowerCase())
+      )
+    : gebuhPositions
+
+  const gebuhGroups = gebuhFiltered.reduce<Record<string, GebuhPosition[]>>((acc, pos) => {
     const cat = pos.kategorie ?? 'Sonstiges'
     ;(acc[cat] ??= []).push(pos)
     return acc
@@ -243,38 +251,61 @@ export function CreateInvoiceForm({
                               </button>
                             ))}
 
-                            {/* GebüH-Positionen gruppiert */}
+                            {/* GebüH-Positionen mit Suche */}
                             {(catalogTab === 'gebuh' || !serviceItems.length) && hasGebuh && (
                               <>
-                                {!serviceItems.length && (
-                                  <p className="px-3 py-1.5 text-xs font-medium text-zinc-400 uppercase tracking-wide">GebüH-Positionen</p>
-                                )}
-                                {Object.entries(gebuhGroups).map(([kat, positions]) => (
-                                  <div key={kat}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setGebuhExpanded(gebuhExpanded === kat ? null : kat)}
-                                      className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-50 uppercase tracking-wide"
-                                    >
-                                      {kat}
-                                      <ChevronDown className={`h-3 w-3 transition-transform ${gebuhExpanded === kat ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    {gebuhExpanded === kat && positions.map((pos) => (
-                                      <button
-                                        key={pos.id} type="button"
-                                        onClick={() => applyGebuhPosition(idx, pos)}
-                                        className="flex w-full flex-col px-4 py-2 text-left hover:bg-zinc-50"
-                                      >
-                                        <span className="text-sm font-medium text-zinc-900">
-                                          {pos.ziffer} – {pos.kurztext}
-                                        </span>
-                                        <span className="text-xs text-zinc-400">
-                                          Empfehlung: {pos.empfehlung_eur.toFixed(2).replace('.', ',')} € · steuerbefreit
-                                        </span>
-                                      </button>
-                                    ))}
+                                {/* Suchfeld */}
+                                <div className="px-3 py-2 border-b border-zinc-100">
+                                  <div className="relative">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+                                    <input
+                                      type="text"
+                                      value={gebuhSearch}
+                                      onChange={(e) => setGebuhSearch(e.target.value)}
+                                      placeholder="Ziffer oder Begriff …"
+                                      autoFocus
+                                      className="w-full rounded-md border border-zinc-200 bg-zinc-50 pl-8 pr-3 py-1.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                                    />
                                   </div>
-                                ))}
+                                </div>
+                                {/* Ergebnisliste */}
+                                {gebuhFiltered.length === 0 ? (
+                                  <p className="px-4 py-4 text-xs text-zinc-400 text-center">Keine Positionen gefunden</p>
+                                ) : gebuhSearch.trim() ? (
+                                  /* Bei Suche: flache Liste ohne Kategorien */
+                                  gebuhFiltered.map((pos) => (
+                                    <button key={pos.id} type="button"
+                                      onClick={() => { applyGebuhPosition(idx, pos); setGebuhSearch('') }}
+                                      className="flex w-full flex-col px-3 py-2 text-left hover:bg-zinc-50">
+                                      <span className="text-sm font-medium text-zinc-900">{pos.ziffer} – {pos.kurztext}</span>
+                                      <span className="text-xs text-zinc-400">
+                                        {pos.empfehlung_eur.toFixed(2).replace('.', ',')} € · {pos.kategorie}
+                                      </span>
+                                    </button>
+                                  ))
+                                ) : (
+                                  /* Ohne Suche: nach Kategorie gruppiert */
+                                  Object.entries(gebuhGroups).map(([kat, positions]) => (
+                                    <div key={kat}>
+                                      <button type="button"
+                                        onClick={() => setGebuhExpanded(gebuhExpanded === kat ? null : kat)}
+                                        className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-50 uppercase tracking-wide">
+                                        {kat}
+                                        <ChevronDown className={`h-3 w-3 transition-transform ${gebuhExpanded === kat ? 'rotate-180' : ''}`} />
+                                      </button>
+                                      {gebuhExpanded === kat && positions.map((pos) => (
+                                        <button key={pos.id} type="button"
+                                          onClick={() => applyGebuhPosition(idx, pos)}
+                                          className="flex w-full flex-col px-4 py-2 text-left hover:bg-zinc-50">
+                                          <span className="text-sm font-medium text-zinc-900">{pos.ziffer} – {pos.kurztext}</span>
+                                          <span className="text-xs text-zinc-400">
+                                            Empfehlung: {pos.empfehlung_eur.toFixed(2).replace('.', ',')} € · steuerbefreit
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  ))
+                                )}
                               </>
                             )}
                           </div>
