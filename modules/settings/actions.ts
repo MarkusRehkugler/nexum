@@ -42,6 +42,7 @@ export async function saveTenantProfileAction(
     invoice_notes:       formData.get('invoice_notes') as string || null,
     payment_terms_days:  parseInt(formData.get('payment_terms_days') as string) || 14,
     client_label:        clientLabelRaw?.trim() || 'Klient',
+    fee_schedules:       formData.getAll('fee_schedules') as string[],
   }
 
   const { error } = await supabase

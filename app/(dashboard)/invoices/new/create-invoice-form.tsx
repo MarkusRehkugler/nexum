@@ -122,7 +122,7 @@ export function CreateInvoiceForm({
     return acc
   }, {})
 
-  const hasGebuh       = gebuhPositions.length > 0
+  const hasGebuh       = gebuhPositions.length > 0 && (tenantProfile?.fee_schedules?.includes('gebuh') ?? false)
   const hasCatalog     = serviceItems.length > 0 || hasGebuh
   const showCatalogTab = catalogTab === 'service' ? serviceItems.length > 0 : hasGebuh
 

@@ -76,7 +76,7 @@ export function CreateRecurringForm({ clients, serviceItems, tenantProfile, gebu
   }
 
   const today    = new Date().toISOString().split('T')[0]
-  const hasGebuh = gebuhPositions.length > 0
+  const hasGebuh = gebuhPositions.length > 0 && (tenantProfile?.fee_schedules?.includes('gebuh') ?? false)
   const hasCatalog = serviceItems.length > 0 || hasGebuh
 
   const gebuhGroups = gebuhPositions.reduce<Record<string, GebuhPosition[]>>((acc, pos) => {

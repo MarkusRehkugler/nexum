@@ -172,6 +172,63 @@ export function ProfileForm({ profile }: Props) {
         </div>
       </section>
 
+      {/* Gebührenordnungen */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-zinc-900">Gebührenordnungen</h2>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            Welche Gebührenordnungen verwendest du bei der Abrechnung?
+          </p>
+        </div>
+        <div className="space-y-3">
+          {/* GebüH — aktiv */}
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              name="fee_schedules"
+              value="gebuh"
+              defaultChecked={profile?.fee_schedules?.includes('gebuh')}
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+            />
+            <div>
+              <span className="text-sm font-medium text-zinc-900">GebüH</span>
+              <span className="ml-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">Verfügbar</span>
+              <p className="text-xs text-zinc-400 mt-0.5">Gebührenordnung für Heilpraktiker — ~37 Positionen mit Empfehlungsgebühren</p>
+            </div>
+          </label>
+
+          {/* GOÄ — in Planung */}
+          <label className="flex items-start gap-3 cursor-not-allowed opacity-60">
+            <input type="checkbox" disabled className="mt-0.5 h-4 w-4 rounded border-zinc-300" />
+            <div>
+              <span className="text-sm font-medium text-zinc-700">GOÄ</span>
+              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">In Planung</span>
+              <p className="text-xs text-zinc-400 mt-0.5">Gebührenordnung für Ärzte — Ärzte, Psychiater, ärztliche Psychotherapeuten</p>
+            </div>
+          </label>
+
+          {/* GOP / Privatvereinbarung — in Planung */}
+          <label className="flex items-start gap-3 cursor-not-allowed opacity-60">
+            <input type="checkbox" disabled className="mt-0.5 h-4 w-4 rounded border-zinc-300" />
+            <div>
+              <span className="text-sm font-medium text-zinc-700">Privatvereinbarung / GOP</span>
+              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">In Planung</span>
+              <p className="text-xs text-zinc-400 mt-0.5">Für Psychologische Psychotherapeuten und Privatpatienten-Vereinbarungen</p>
+            </div>
+          </label>
+
+          {/* GOZ — in Planung */}
+          <label className="flex items-start gap-3 cursor-not-allowed opacity-60">
+            <input type="checkbox" disabled className="mt-0.5 h-4 w-4 rounded border-zinc-300" />
+            <div>
+              <span className="text-sm font-medium text-zinc-700">GOZ</span>
+              <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">In Planung</span>
+              <p className="text-xs text-zinc-400 mt-0.5">Gebührenordnung für Zahnärzte</p>
+            </div>
+          </label>
+        </div>
+      </section>
+
       <button type="submit" disabled={pending}
         className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-zinc-700 transition-colors disabled:opacity-50">
         {pending ? 'Speichern…' : 'Speichern'}

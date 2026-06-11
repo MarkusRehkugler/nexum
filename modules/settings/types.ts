@@ -21,6 +21,7 @@ export interface TenantProfile {
   invoice_notes: string | null
   payment_terms_days: number
   client_label?: string | null
+  fee_schedules?: string[]
 }
 
 export const TAX_MODE_LABELS: Record<TenantProfile['tax_mode'], string> = {
