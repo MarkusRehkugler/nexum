@@ -31,6 +31,8 @@ export async function createInvoiceAction(
     taxRate:     itemTaxRates[i] !== undefined ? Number(itemTaxRates[i]) : undefined,
   }))
 
+  const sessionIds = (formData.getAll('session_id') as string[]).filter(Boolean)
+
   const raw = {
     clientId:          formData.get('clientId')          as string,
     lineItems,
@@ -111,6 +113,14 @@ export async function createInvoiceAction(
   if (error || !invoice) {
     console.error('createInvoice error:', error)
     return { errors: { general: ['Rechnung konnte nicht erstellt werden.'] } }
+  }
+
+  // Verknüpfte Sitzungen als abgerechnet markieren
+  if (sessionIds.length > 0) {
+    await supabase
+      .from('sessions')
+      .update({ invoice_id: invoice.id, status: 'billed' })
+      .in('id', sessionIds)
   }
 
   redirect(`/invoices/${invoice.id}`)

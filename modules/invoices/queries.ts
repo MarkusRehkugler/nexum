@@ -127,6 +127,101 @@ export async function getRecurringInvoiceById(id: string): Promise<RecurringInvo
 }
 
 // ============================================================
+// Sitzungs-Abrechnung (M22)
+// ============================================================
+
+export interface UnbilledSession {
+  id: string
+  session_date: string
+  type: string
+  duration_minutes: number | null
+  status: string
+  invoice_id: string | null
+  case: {
+    id: string
+    client_id: string
+    client: {
+      id: string
+      display_label: string
+      personal_data: { name?: string }
+    }
+  }
+}
+
+export async function getUnbilledSessions(clientId?: string): Promise<UnbilledSession[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select(`
+      id,
+      session_date,
+      type,
+      duration_minutes,
+      status,
+      invoice_id,
+      case:cases (
+        id,
+        client_id,
+        client:clients (
+          id,
+          display_label,
+          personal_data
+        )
+      )
+    `)
+    .is('deleted_at', null)
+    .is('invoice_id', null)
+    .in('status', ['completed', 'draft'])
+    .order('session_date', { ascending: false })
+
+  if (error) {
+    console.error('getUnbilledSessions error:', error)
+    return []
+  }
+
+  let sessions = (data ?? []) as unknown as UnbilledSession[]
+  if (clientId) {
+    sessions = sessions.filter(s => s.case?.client_id === clientId)
+  }
+  return sessions
+}
+
+export async function getSessionsByIds(ids: string[]): Promise<UnbilledSession[]> {
+  if (!ids.length) return []
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .select(`
+      id,
+      session_date,
+      type,
+      duration_minutes,
+      status,
+      invoice_id,
+      case:cases (
+        id,
+        client_id,
+        client:clients (
+          id,
+          display_label,
+          personal_data
+        )
+      )
+    `)
+    .in('id', ids)
+    .is('deleted_at', null)
+
+  if (error) {
+    console.error('getSessionsByIds error:', error)
+    return []
+  }
+
+  return (data ?? []) as unknown as UnbilledSession[]
+}
+
+// ============================================================
 // GebüH (Gebührenordnung für Heilpraktiker)
 // ============================================================
 

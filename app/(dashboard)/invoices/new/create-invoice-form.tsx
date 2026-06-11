@@ -5,7 +5,9 @@ import { createInvoiceAction, type CreateInvoiceState } from '@/modules/invoices
 import type { ClientRecord } from '@/modules/clients/types'
 import type { ServiceItem, TenantProfile } from '@/modules/settings/types'
 import type { GebuhPosition } from '@/modules/invoices/types'
-import { Plus, Trash2, BookOpen, Stethoscope, ChevronDown, Search } from 'lucide-react'
+import { Plus, Trash2, BookOpen, Stethoscope, ChevronDown, Search, Calendar } from 'lucide-react'
+import type { UnbilledSession } from '@/modules/invoices/queries'
+import { SESSION_TYPE_LABELS } from '@/modules/sessions/schemas'
 
 const initialState: CreateInvoiceState = {}
 
@@ -17,12 +19,13 @@ interface LineItemRow {
 }
 
 interface Props {
-  clients:         ClientRecord[]
-  serviceItems:    ServiceItem[]
-  tenantProfile:   TenantProfile | null
-  gebuhPositions:  GebuhPosition[]
-  defaultClientId?: string
+  clients:            ClientRecord[]
+  serviceItems:       ServiceItem[]
+  tenantProfile:      TenantProfile | null
+  gebuhPositions:     GebuhPosition[]
+  defaultClientId?:   string
   defaultDescription?: string
+  prefilledSessions?: UnbilledSession[]
 }
 
 function formatEUR(val: string) {
@@ -37,14 +40,31 @@ function initTaxMode(profile: TenantProfile | null): string {
   return 'none'
 }
 
+function sessionToLineItem(s: UnbilledSession): LineItemRow {
+  const date = new Date(s.session_date).toLocaleDateString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+  const type = SESSION_TYPE_LABELS[s.type] ?? s.type
+  const dur  = s.duration_minutes ? ` (${s.duration_minutes} min)` : ''
+  return {
+    description: `${type} vom ${date}${dur}`,
+    quantity:    '1',
+    unitPrice:   '',
+    taxRate:     '0',
+  }
+}
+
 export function CreateInvoiceForm({
   clients, serviceItems, tenantProfile, gebuhPositions,
-  defaultClientId, defaultDescription,
+  defaultClientId, defaultDescription, prefilledSessions,
 }: Props) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialState)
-  const [items, setItems] = useState<LineItemRow[]>([
-    { description: defaultDescription ?? '', quantity: '1', unitPrice: '', taxRate: '0' },
-  ])
+  const [items, setItems] = useState<LineItemRow[]>(() => {
+    if (prefilledSessions && prefilledSessions.length > 0) {
+      return prefilledSessions.map(sessionToLineItem)
+    }
+    return [{ description: defaultDescription ?? '', quantity: '1', unitPrice: '', taxRate: '0' }]
+  })
   const [taxMode, setTaxMode]           = useState(() => initTaxMode(tenantProfile))
   const [taxRate, setTaxRate]           = useState('19')
   const [catalogOpenIdx, setCatalogOpenIdx] = useState<number | null>(null)
@@ -141,9 +161,30 @@ export function CreateInvoiceForm({
       )}
 
       <form action={action} className="space-y-6">
+        {/* Versteckte Session-IDs */}
+        {prefilledSessions?.map(s => (
+          <input key={s.id} type="hidden" name="session_id" value={s.id} />
+        ))}
+
         {state.errors?.general && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {state.errors.general[0]}
+          </div>
+        )}
+
+        {/* Banner: Rechnung aus Sitzungen */}
+        {prefilledSessions && prefilledSessions.length > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Rechnung aus {prefilledSessions.length} Sitzung{prefilledSessions.length !== 1 ? 'en' : ''}
+              </p>
+              <p className="mt-0.5 text-xs text-blue-700">
+                Die Sitzungen werden nach dem Speichern automatisch als „Abgerechnet" markiert.
+                Bitte Preise ergänzen.
+              </p>
+            </div>
           </div>
         )}
 

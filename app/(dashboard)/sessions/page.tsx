@@ -132,6 +132,15 @@ export default async function SessionsPage({ searchParams }: Props) {
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${statusClass(s.status)}`}>
                         {statusLabel(s.status)}
                       </span>
+                      {(s as { invoice_id?: string | null }).invoice_id && (
+                        <Link
+                          href={`/invoices/${(s as { invoice_id?: string | null }).invoice_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-2 text-xs text-zinc-400 hover:text-zinc-700 underline"
+                        >
+                          RE →
+                        </Link>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-sm" title={s.ai_processing_status}>
                       {aiStatusDot(s.ai_processing_status)}

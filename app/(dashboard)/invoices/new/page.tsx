@@ -2,20 +2,26 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { getClients } from '@/modules/clients/queries'
 import { getServiceItems, getTenantProfile } from '@/modules/settings/queries'
-import { getGebuhPositions } from '@/modules/invoices/queries'
+import { getGebuhPositions, getSessionsByIds } from '@/modules/invoices/queries'
 import { CreateInvoiceForm } from './create-invoice-form'
 
 interface Props {
-  searchParams: Promise<{ clientId?: string; description?: string }>
+  searchParams: Promise<{ clientId?: string; description?: string; sessions?: string | string[] }>
 }
 
 export default async function NewInvoicePage({ searchParams }: Props) {
-  const { clientId, description } = await searchParams
-  const [clients, serviceItems, tenantProfile, gebuhPositions] = await Promise.all([
+  const { clientId, description, sessions: sessionsParam } = await searchParams
+
+  const sessionIds = sessionsParam
+    ? (Array.isArray(sessionsParam) ? sessionsParam : [sessionsParam]).filter(Boolean)
+    : []
+
+  const [clients, serviceItems, tenantProfile, gebuhPositions, prefilledSessions] = await Promise.all([
     getClients(),
     getServiceItems(),
     getTenantProfile(),
     getGebuhPositions(),
+    sessionIds.length > 0 ? getSessionsByIds(sessionIds) : Promise.resolve([]),
   ])
 
   return (
@@ -40,6 +46,7 @@ export default async function NewInvoicePage({ searchParams }: Props) {
           gebuhPositions={gebuhPositions}
           defaultClientId={clientId}
           defaultDescription={description}
+          prefilledSessions={prefilledSessions}
         />
       </div>
     </div>

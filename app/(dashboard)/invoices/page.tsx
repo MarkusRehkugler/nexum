@@ -27,6 +27,12 @@ export default async function InvoicesPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/invoices/billing"
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+          >
+            Offene Abrechnung
+          </Link>
+          <Link
             href="/invoices/recurring"
             className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
           >
