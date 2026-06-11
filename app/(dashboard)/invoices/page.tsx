@@ -25,13 +25,21 @@ export default async function InvoicesPage() {
               : `${invoices.length} Rechnung${invoices.length !== 1 ? 'en' : ''}${totalOpen > 0 ? ` · ${formatEUR(totalOpen)} offen` : ''}`}
           </p>
         </div>
-        <Link
-          href="/invoices/new"
-          className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Neue Rechnung
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/invoices/recurring"
+            className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+          >
+            Wiederkehrend
+          </Link>
+          <Link
+            href="/invoices/new"
+            className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Neue Rechnung
+          </Link>
+        </div>
       </div>
 
       {invoices.length === 0 ? (

@@ -13,7 +13,7 @@ export interface TenantProfile {
   website: string | null
   tax_id: string | null
   vat_id: string | null
-  tax_mode: 'kleinunternehmer' | 'regelbesteuerung_19' | 'heilpraktiker_mix'
+  tax_mode: 'kleinunternehmer' | 'steuerfrei_heilpraktiker' | 'regelbesteuerung_19' | 'regelbesteuerung_7'
   bank_name: string | null
   iban: string | null
   bic: string | null
@@ -24,9 +24,10 @@ export interface TenantProfile {
 }
 
 export const TAX_MODE_LABELS: Record<TenantProfile['tax_mode'], string> = {
-  kleinunternehmer:    'Kleinunternehmer §19 UStG (keine MwSt)',
-  regelbesteuerung_19: 'Regelbesteuerung 19% MwSt',
-  heilpraktiker_mix:   'Teilweise steuerbefreit §4 Nr. 14 (Heilberufe)',
+  kleinunternehmer:         'Kleinunternehmer §19 UStG (keine MwSt.)',
+  steuerfrei_heilpraktiker: 'Steuerbefreit §4 Nr. 14 UStG (Heilpraktiker)',
+  regelbesteuerung_19:      'Regelbesteuerung 19% MwSt.',
+  regelbesteuerung_7:       'Ermäßigter Steuersatz 7% MwSt.',
 }
 
 export interface ServiceItem {

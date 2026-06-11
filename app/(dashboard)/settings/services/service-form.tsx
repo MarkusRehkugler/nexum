@@ -62,7 +62,7 @@ export function ServiceForm({ item, tenantProfile }: Props) {
       {/* Umsatzsteuer — nur anzeigen wenn nicht Kleinunternehmer */}
       {taxMode === 'kleinunternehmer' ? (
         <input type="hidden" name="tax_rate" value="0" />
-      ) : taxMode === 'heilpraktiker_mix' ? (
+      ) : taxMode === 'steuerfrei_heilpraktiker' ? (
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-1">Umsatzsteuer</label>
           <select name="tax_rate" defaultValue={String(item?.tax_rate ?? 0)}

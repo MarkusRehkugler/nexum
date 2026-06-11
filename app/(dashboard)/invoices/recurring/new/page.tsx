@@ -3,14 +3,9 @@ import { ChevronLeft } from 'lucide-react'
 import { getClients } from '@/modules/clients/queries'
 import { getServiceItems, getTenantProfile } from '@/modules/settings/queries'
 import { getGebuhPositions } from '@/modules/invoices/queries'
-import { CreateInvoiceForm } from './create-invoice-form'
+import { CreateRecurringForm } from './create-recurring-form'
 
-interface Props {
-  searchParams: Promise<{ clientId?: string; description?: string }>
-}
-
-export default async function NewInvoicePage({ searchParams }: Props) {
-  const { clientId, description } = await searchParams
+export default async function NewRecurringInvoicePage() {
   const [clients, serviceItems, tenantProfile, gebuhPositions] = await Promise.all([
     getClients(),
     getServiceItems(),
@@ -20,26 +15,24 @@ export default async function NewInvoicePage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link href="/invoices" className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+      <Link href="/invoices/recurring" className="flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
         <ChevronLeft className="h-4 w-4" />
-        Zurück zu Rechnungen
+        Wiederkehrende Rechnungen
       </Link>
 
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Neue Rechnung</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900">Neue Vorlage</h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Rechnung wird als Entwurf gespeichert — du kannst sie danach drucken oder als PDF speichern.
+          Wird automatisch im gewählten Rhythmus als Entwurf erstellt.
         </p>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <CreateInvoiceForm
+        <CreateRecurringForm
           clients={clients}
           serviceItems={serviceItems}
           tenantProfile={tenantProfile}
           gebuhPositions={gebuhPositions}
-          defaultClientId={clientId}
-          defaultDescription={description}
         />
       </div>
     </div>
