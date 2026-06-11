@@ -86,7 +86,7 @@ export async function sendInvoiceEmail(params: SendInvoiceEmailParams): Promise<
   if (!apiKey) return { error: 'RESEND_API_KEY nicht konfiguriert. E-Mail-Versand nicht möglich.' }
 
   const resend = new Resend(apiKey)
-  const fromEmail = process.env.RESEND_FROM_EMAIL || 'rechnungen@nexum.app'
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
   const { error } = await resend.emails.send({
     from:    `${params.senderName} <${fromEmail}>`,
