@@ -131,7 +131,7 @@ export function AudioRecorder({ sessionId, hasExistingAudio }: Props) {
       {state === 'idle' && (
         <button
           onClick={startRecording}
-          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-red-500 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-zinc-700 transition-colors"
         >
           <Mic className="h-4 w-4" />
           Aufnahme starten

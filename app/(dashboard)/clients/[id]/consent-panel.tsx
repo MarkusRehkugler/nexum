@@ -99,12 +99,11 @@ export function ConsentPanel({ clientId, consent }: Props) {
         <ConsentBadge granted={consent.session_recording} label="Aufnahmen" />
       </div>
 
-      {signedAt && (
-        <p className="px-5 pb-4 text-xs text-zinc-400">
-          Zuletzt aktualisiert: {signedAt}
-          {consent.method && ` · ${METHOD_LABELS[consent.method] ?? consent.method}`}
-        </p>
-      )}
+      <p className="px-5 pb-4 text-xs text-zinc-400">
+        {signedAt
+          ? <>Vom Therapeuten dokumentiert · {signedAt}{consent.method && ` · ${METHOD_LABELS[consent.method] ?? consent.method}`}</>
+          : 'Noch nicht dokumentiert — bitte Einwilligungen erfassen'}
+      </p>
 
       {/* Formular */}
       {open && (

@@ -8,6 +8,8 @@ import { getTaskCountForSession } from '@/modules/tasks/queries'
 import type { ConsentRecord } from '@/modules/consent/types'
 import { AudioRecorder } from './audio-recorder'
 import { AiPanel } from './ai-panel'
+import { NotesEditor } from './notes-editor'
+import { CompleteSessionButton } from './complete-session-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -43,7 +45,6 @@ export default async function SessionDetailPage({ params }: Props) {
 
   const clientId = session.case?.client_id ?? ''
 
-  // KI-Ergebnis laden (falls vorhanden)
   const admin = createAdminClient()
   const { data: aiResult } = await admin
     .from('ai_session_results')
@@ -64,7 +65,6 @@ export default async function SessionDetailPage({ params }: Props) {
 
   const savedTaskCount = await getTaskCountForSession(id)
 
-  // KI-Einwilligung des Klienten prüfen
   let aiConsentGiven = false
   if (clientId) {
     const supabase = await createClient()
@@ -76,6 +76,8 @@ export default async function SessionDetailPage({ params }: Props) {
     const consent = clientData?.consent_records as ConsentRecord | null
     aiConsentGiven = consent?.ai_processing === true
   }
+
+  const isDraft = session.status === 'draft'
 
   return (
     <div className="space-y-6">
@@ -110,10 +112,19 @@ export default async function SessionDetailPage({ params }: Props) {
         </span>
       </div>
 
+      {/* Entwurf-Hinweis */}
+      {isDraft && (
+        <div className="flex items-center justify-between rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+          <p className="text-sm text-yellow-800">
+            Diese Sitzung ist noch im Entwurf. Nach der Dokumentation als abgeschlossen markieren.
+          </p>
+          <CompleteSessionButton sessionId={id} />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Linke Spalte: Audio + Handnotizen */}
+        {/* Linke Spalte: Audio + Notizen */}
         <div className="space-y-4">
-          {/* Audio-Aufnahme */}
           <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold text-zinc-700">🎙️ Aufnahme</h2>
             <AudioRecorder
@@ -122,18 +133,12 @@ export default async function SessionDetailPage({ params }: Props) {
             />
           </div>
 
-          {/* Handnotizen */}
-          {session.notes_raw && (
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">Handnotizen</h2>
-              <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">{session.notes_raw}</p>
-            </div>
-          )}
+          <NotesEditor sessionId={id} initialNotes={session.notes_raw} />
         </div>
 
-        {/* Rechte Spalte: KI-Pipeline */}
+        {/* Rechte Spalte: KI-Protokoll */}
         <div>
-          <h2 className="mb-4 text-sm font-semibold text-zinc-700">🤖 KI-Dokumentation</h2>
+          <h2 className="mb-4 text-sm font-semibold text-zinc-700">🤖 KI-Protokoll</h2>
           <AiPanel
             sessionId={id}
             clientId={clientId}
@@ -149,7 +154,7 @@ export default async function SessionDetailPage({ params }: Props) {
       {/* Aktionen */}
       <div className="flex items-center gap-3 border-t border-zinc-100 pt-4">
         <Link
-          href={`/invoices/new?sessionId=${id}`}
+          href={`/invoices/new?sessions=${id}`}
           className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-300 hover:shadow-sm transition-all"
         >
           <Receipt className="h-4 w-4" />

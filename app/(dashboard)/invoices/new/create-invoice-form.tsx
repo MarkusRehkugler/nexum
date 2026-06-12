@@ -36,8 +36,14 @@ function formatEUR(val: string) {
 function initTaxMode(profile: TenantProfile | null): string {
   if (!profile) return 'none'
   if (profile.tax_mode === 'regelbesteuerung_19' || profile.tax_mode === 'regelbesteuerung_7') return 'excluded'
-  if (profile.tax_mode === 'steuerfrei_heilpraktiker') return 'per_item'
+  if (profile.tax_mode === 'steuerfrei_heilpraktiker') return 'none'
   return 'none'
+}
+
+function initTaxRate(profile: TenantProfile | null): string {
+  if (!profile) return '19'
+  if (profile.tax_mode === 'regelbesteuerung_7') return '7'
+  return '19'
 }
 
 function sessionToLineItem(s: UnbilledSession): LineItemRow {
@@ -66,7 +72,7 @@ export function CreateInvoiceForm({
     return [{ description: defaultDescription ?? '', quantity: '1', unitPrice: '', taxRate: '0' }]
   })
   const [taxMode, setTaxMode]           = useState(() => initTaxMode(tenantProfile))
-  const [taxRate, setTaxRate]           = useState('19')
+  const [taxRate, setTaxRate]           = useState(() => initTaxRate(tenantProfile))
   const [catalogOpenIdx, setCatalogOpenIdx] = useState<number | null>(null)
   const [catalogTab, setCatalogTab]     = useState<'service' | 'gebuh'>('service')
   const [gebuhExpanded, setGebuhExpanded] = useState<string | null>(null)

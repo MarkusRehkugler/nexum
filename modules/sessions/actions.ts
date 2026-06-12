@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createSessionSchema } from './schemas'
 
@@ -124,4 +125,27 @@ export async function createSessionAction(
   }
 
   redirect(`/sessions/${session.id}`)
+}
+
+export async function completeSessionAction(sessionId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('sessions')
+    .update({ status: 'completed' })
+    .eq('id', sessionId)
+  if (error) return { error: 'Status konnte nicht aktualisiert werden.' }
+  revalidatePath(`/sessions/${sessionId}`)
+  revalidatePath('/sessions')
+  return {}
+}
+
+export async function updateSessionNotesAction(sessionId: string, notes: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('sessions')
+    .update({ notes_raw: notes || null })
+    .eq('id', sessionId)
+  if (error) return { error: 'Notizen konnten nicht gespeichert werden.' }
+  revalidatePath(`/sessions/${sessionId}`)
+  return {}
 }

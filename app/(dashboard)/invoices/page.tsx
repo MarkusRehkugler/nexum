@@ -7,10 +7,28 @@ function formatEUR(amount: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount)
 }
 
-export default async function InvoicesPage() {
-  const invoices = await getInvoices()
+const STATUS_FILTER_OPTIONS = [
+  { value: '', label: 'Alle' },
+  { value: 'draft', label: 'Entwurf' },
+  { value: 'sent', label: 'Versendet' },
+  { value: 'paid', label: 'Bezahlt' },
+  { value: 'overdue', label: 'Überfällig' },
+  { value: 'canceled', label: 'Storniert' },
+]
 
-  const totalOpen = invoices
+interface Props {
+  searchParams: Promise<{ status?: string }>
+}
+
+export default async function InvoicesPage({ searchParams }: Props) {
+  const { status: filterStatus } = await searchParams
+  const allInvoices = await getInvoices()
+
+  const invoices = filterStatus
+    ? allInvoices.filter(i => i.status === filterStatus)
+    : allInvoices
+
+  const totalOpen = allInvoices
     .filter((i) => i.status === 'sent' || i.status === 'overdue')
     .reduce((s, i) => s + Number(i.total_gross), 0)
 
@@ -20,9 +38,9 @@ export default async function InvoicesPage() {
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">Rechnungen</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {invoices.length === 0
+            {allInvoices.length === 0
               ? 'Noch keine Rechnungen.'
-              : `${invoices.length} Rechnung${invoices.length !== 1 ? 'en' : ''}${totalOpen > 0 ? ` · ${formatEUR(totalOpen)} offen` : ''}`}
+              : `${allInvoices.length} Rechnung${allInvoices.length !== 1 ? 'en' : ''}${totalOpen > 0 ? ` · ${formatEUR(totalOpen)} offen` : ''}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -34,6 +52,7 @@ export default async function InvoicesPage() {
           </Link>
           <Link
             href="/invoices/recurring"
+            title="Automatisch wiederkehrende Rechnungsvorlagen verwalten"
             className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
           >
             Wiederkehrend
@@ -48,18 +67,55 @@ export default async function InvoicesPage() {
         </div>
       </div>
 
+      {/* Status-Filter */}
+      {allInvoices.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {STATUS_FILTER_OPTIONS.map(opt => {
+            const isActive = (opt.value === '' && !filterStatus) || opt.value === filterStatus
+            const href = opt.value ? `/invoices?status=${opt.value}` : '/invoices'
+            return (
+              <Link
+                key={opt.value}
+                href={href}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                }`}
+              >
+                {opt.label}
+                {opt.value && (
+                  <span className="ml-1.5 opacity-70">
+                    {allInvoices.filter(i => i.status === opt.value).length}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {invoices.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
           <Receipt className="mb-3 h-8 w-8 text-zinc-300" />
-          <p className="text-sm font-medium text-zinc-600">Noch keine Rechnungen</p>
-          <p className="mt-1 text-xs text-zinc-400">Erstelle deine erste Rechnung nach einer Sitzung.</p>
-          <Link
-            href="/invoices/new"
-            className="mt-4 flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Erste Rechnung erstellen
-          </Link>
+          {allInvoices.length === 0 ? (
+            <>
+              <p className="text-sm font-medium text-zinc-600">Noch keine Rechnungen</p>
+              <p className="mt-1 text-xs text-zinc-400">Erstelle deine erste Rechnung nach einer Sitzung.</p>
+              <Link
+                href="/invoices/new"
+                className="mt-4 flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Erste Rechnung erstellen
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-zinc-600">Keine Rechnungen mit diesem Status</p>
+              <Link href="/invoices" className="mt-2 text-xs text-zinc-400 hover:underline">Filter zurücksetzen</Link>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">

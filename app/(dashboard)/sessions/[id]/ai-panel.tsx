@@ -116,7 +116,7 @@ export function AiPanel({ sessionId, clientId, aiProcessingStatus, hasAudio, ini
             <span className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
               transcribeState === 'done' ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-500'
             }`}>1</span>
-            Transkription (Whisper)
+            Transkription
           </h3>
           {transcribeState === 'idle' && (
             <button
@@ -164,7 +164,7 @@ export function AiPanel({ sessionId, clientId, aiProcessingStatus, hasAudio, ini
             <span className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
               protocolState === 'done' ? 'bg-green-100 text-green-700' : 'bg-zinc-100 text-zinc-500'
             }`}>2</span>
-            KI-Protokoll (GPT-4o)
+            KI-Protokoll
           </h3>
           {protocolState === 'idle' && (
             <button
@@ -179,7 +179,7 @@ export function AiPanel({ sessionId, clientId, aiProcessingStatus, hasAudio, ini
           {protocolState === 'loading' && (
             <span className="flex items-center gap-1.5 text-xs text-zinc-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              GPT-4o analysiert …
+              KI analysiert …
             </span>
           )}
         </div>
