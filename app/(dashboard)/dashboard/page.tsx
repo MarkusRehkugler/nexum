@@ -118,8 +118,7 @@ export default async function DashboardPage() {
     supabase
       .from('ai_session_results')
       .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .is('deleted_at', null),
+      .eq('tenant_id', tenantId),
 
     supabase
       .from('tenant_profiles')
