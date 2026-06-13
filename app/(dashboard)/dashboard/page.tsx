@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import {
   Users, FileText, CalendarDays, Receipt,
-  ListChecks, ArrowRight, TrendingUp, Clock,
-  Play,
+  ListChecks, ArrowRight, Clock,
+  Play, CheckCircle2, Circle, Video,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getUpcomingCalendarEntries } from '@/modules/calendar/queries'
+import { getUpcomingCalendarEntries, getTodayCalendarEntries } from '@/modules/calendar/queries'
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
@@ -41,12 +41,10 @@ export default async function DashboardPage() {
   const tenantId = profile?.tenant_id
   const name = (profile?.profile as { name?: string } | null)?.name ?? 'Coach'
 
-  // Erster Tag des aktuellen Monats
   const monthStart = new Date()
   monthStart.setDate(1)
   monthStart.setHours(0, 0, 0, 0)
 
-  // Alle KPIs + Daten parallel laden
   const [
     clientsRes,
     sessionsMonthRes,
@@ -54,8 +52,12 @@ export default async function DashboardPage() {
     invoicesDraftRes,
     recentSessionsRes,
     upcomingEntries,
+    todayEntries,
+    totalSessionsRes,
+    totalInvoicesRes,
+    aiProtocolsRes,
+    tenantProfileRes,
   ] = await Promise.all([
-    // Aktive Klienten
     supabase
       .from('clients')
       .select('id', { count: 'exact', head: true })
@@ -63,7 +65,6 @@ export default async function DashboardPage() {
       .eq('status', 'active')
       .is('deleted_at', null),
 
-    // Sitzungen diesen Monat
     supabase
       .from('sessions')
       .select('id', { count: 'exact', head: true })
@@ -71,7 +72,6 @@ export default async function DashboardPage() {
       .gte('session_date', monthStart.toISOString())
       .is('deleted_at', null),
 
-    // Offene Aufgaben
     supabase
       .from('client_tasks')
       .select('id', { count: 'exact', head: true })
@@ -79,7 +79,6 @@ export default async function DashboardPage() {
       .eq('status', 'open')
       .is('deleted_at', null),
 
-    // Offene Rechnungen (Entwurf + Versendet) + Summe
     supabase
       .from('invoices')
       .select('total_gross')
@@ -87,7 +86,6 @@ export default async function DashboardPage() {
       .in('status', ['draft', 'sent'])
       .is('deleted_at', null),
 
-    // Letzte 4 Sitzungen mit Klientenname
     supabase
       .from('sessions')
       .select(`
@@ -101,23 +99,71 @@ export default async function DashboardPage() {
       .order('session_date', { ascending: false })
       .limit(4),
 
-    // Nächste 5 Termine
     getUpcomingCalendarEntries(5),
+    getTodayCalendarEntries(),
+
+    // Onboarding-Daten
+    supabase
+      .from('sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
+
+    supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
+
+    supabase
+      .from('ai_session_results')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null),
+
+    supabase
+      .from('tenant_profiles')
+      .select('company_name, owner_name')
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
   ])
 
-  const activeClients   = clientsRes.count ?? 0
-  const sessionsMonth   = sessionsMonthRes.count ?? 0
-  const openTasks       = openTasksRes.count ?? 0
-  const openInvoices    = invoicesDraftRes.data ?? []
+  const activeClients    = clientsRes.count ?? 0
+  const sessionsMonth    = sessionsMonthRes.count ?? 0
+  const openTasks        = openTasksRes.count ?? 0
+  const openInvoices     = invoicesDraftRes.data ?? []
   const openInvoiceTotal = openInvoices.reduce((s, r) => s + Number(r.total_gross), 0)
   const openInvoiceCount = openInvoices.length
-  const recentSessions  = recentSessionsRes.data ?? []
+  const recentSessions   = recentSessionsRes.data ?? []
+  const totalSessions    = totalSessionsRes.count ?? 0
+  const totalInvoices    = totalInvoicesRes.count ?? 0
+  const aiProtocols      = aiProtocolsRes.count ?? 0
+  const tenantProfile    = tenantProfileRes.data
 
-  const isNewUser = activeClients === 0
+  // Onboarding-Schritte
+  const hasProfile   = !!(tenantProfile?.company_name || tenantProfile?.owner_name)
+  const hasClient    = activeClients > 0
+  const hasSession   = totalSessions > 0
+  const hasProtocol  = aiProtocols > 0
+  const hasInvoice   = totalInvoices > 0
+
+  const onboardingSteps = [
+    { done: hasProfile,  label: 'Praxisprofil einrichten',      href: '/settings' },
+    { done: hasClient,   label: 'Ersten Klienten anlegen',       href: '/clients/new' },
+    { done: hasSession,  label: 'Erste Sitzung dokumentieren',   href: '/sessions/new' },
+    { done: hasProtocol, label: 'KI-Protokoll generieren',       href: '/sessions' },
+    { done: hasInvoice,  label: 'Erste Rechnung erstellen',      href: '/invoices/new' },
+  ]
+  const doneCount    = onboardingSteps.filter(s => s.done).length
+  const allDone      = doneCount === onboardingSteps.length
+  const showOnboarding = !allDone
 
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   })
+
+  // Heute-Einträge: keine Blocker-Einträge zeigen
+  const relevantTodayEntries = todayEntries.filter(e => e.type !== 'block')
 
   const stats = [
     {
@@ -162,7 +208,7 @@ export default async function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-900">
-            {greeting()}, {name} 👋
+            {greeting()}, {name}
           </h1>
           <p className="mt-0.5 text-sm text-zinc-500 capitalize">{today}</p>
         </div>
@@ -174,6 +220,77 @@ export default async function DashboardPage() {
           Sitzung starten
         </Link>
       </div>
+
+      {/* Heute */}
+      {relevantTodayEntries.length > 0 && (
+        <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-5 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-violet-900">
+              <CalendarDays className="h-4 w-4 text-violet-500" />
+              Heute
+            </h2>
+            <Link href="/calendar" className="flex items-center gap-1 text-xs text-violet-500 hover:text-violet-800">
+              Kalender <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <ul className="space-y-2">
+            {relevantTodayEntries.map(entry => {
+              const clientName =
+                entry.client?.personal_data?.name ?? entry.client?.display_label
+              const isSession = entry.type === 'session'
+              const linked    = entry.session_id !== null
+
+              let cta: { label: string; href: string } | null = null
+              if (isSession && linked) {
+                cta = { label: 'Zur Sitzung', href: `/sessions/${entry.session_id}` }
+              } else if (isSession && !linked) {
+                cta = {
+                  label: 'Sitzung starten',
+                  href: `/sessions/new${entry.client?.id ? `?clientId=${entry.client.id}` : ''}`,
+                }
+              }
+
+              return (
+                <li key={entry.id} className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-white border border-violet-100 shadow-sm">
+                    <span className="text-xs font-bold text-violet-700 leading-none">
+                      {formatTime(entry.starts_at)}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {linked && <Video className="h-3 w-3 text-violet-400 shrink-0" />}
+                      <p className="truncate text-sm font-medium text-zinc-900">{entry.title}</p>
+                    </div>
+                    {clientName && (
+                      <p className="text-xs text-zinc-500">{clientName}</p>
+                    )}
+                  </div>
+                  {cta ? (
+                    <Link
+                      href={cta.href}
+                      className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                        linked
+                          ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
+                          : 'bg-violet-600 text-white hover:bg-violet-700'
+                      }`}
+                    >
+                      {cta.label}
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/calendar/${entry.id}`}
+                      className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
+                    >
+                      Öffnen
+                    </Link>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* KPI-Karten */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -306,41 +423,47 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Onboarding — nur für neue Nutzer */}
-      {isNewUser && (
+      {/* Onboarding-Checklist */}
+      {showOnboarding && (
         <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-3">
-            <TrendingUp className="mt-0.5 h-5 w-5 shrink-0 text-violet-500" />
-            <div className="flex-1">
-              <h2 className="font-semibold text-zinc-900">In 15 Minuten zum ersten KI-Protokoll</h2>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-zinc-900">Erste Schritte</h2>
               <p className="mt-0.5 text-sm text-zinc-500">
-                Folge diesen Schritten für den Aha-Moment.
+                {doneCount} von {onboardingSteps.length} Schritten erledigt
               </p>
-              <ol className="mt-4 space-y-3">
-                {[
-                  { step: 1, label: 'Ersten Klienten anlegen', href: '/clients/new' },
-                  { step: 2, label: 'Einwilligung dokumentieren', href: '/clients' },
-                  { step: 3, label: 'Termin buchen', href: '/calendar/new' },
-                  { step: 4, label: 'Sitzung aufnehmen + Transkribieren', href: '/sessions/new' },
-                  { step: 5, label: 'KI-Protokoll generieren', href: '/sessions' },
-                  { step: 6, label: 'Rechnung erstellen', href: '/invoices/new' },
-                ].map(({ step, label, href }) => (
-                  <li key={step} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-bold text-zinc-500">
-                      {step}
-                    </span>
-                    <Link
-                      href={href}
-                      className="flex items-center gap-1 text-sm text-zinc-700 hover:text-zinc-900 hover:underline"
-                    >
-                      {label}
-                      <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </li>
-                ))}
-              </ol>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {onboardingSteps.map((s, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 w-6 rounded-full transition-colors ${s.done ? 'bg-violet-500' : 'bg-zinc-200'}`}
+                />
+              ))}
             </div>
           </div>
+          <ul className="space-y-2">
+            {onboardingSteps.map(({ done, label, href }) => (
+              <li key={label} className="flex items-center gap-3">
+                {done ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-green-500" />
+                ) : (
+                  <Circle className="h-5 w-5 shrink-0 text-zinc-300" />
+                )}
+                {done ? (
+                  <span className="text-sm text-zinc-400 line-through">{label}</span>
+                ) : (
+                  <Link
+                    href={href}
+                    className="flex items-center gap-1 text-sm text-zinc-700 hover:text-zinc-900 hover:underline"
+                  >
+                    {label}
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

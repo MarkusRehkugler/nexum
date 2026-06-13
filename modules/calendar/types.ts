@@ -1,5 +1,16 @@
 export type CalendarEntryType = 'session' | 'block' | 'event' | 'reminder'
 
+export interface GroupEventParticipant {
+  id: string
+  client_id: string
+  attended: boolean
+  client: {
+    id: string
+    display_label: string
+    personal_data?: { name?: string }
+  } | null
+}
+
 export interface CalendarEntry {
   id: string
   tenant_id: string
@@ -11,6 +22,8 @@ export interface CalendarEntry {
   description: string | null
   starts_at: string   // ISO timestamp
   ends_at: string     // ISO timestamp
+  is_group_event: boolean
+  max_participants: number | null
   recurrence_rule: string | null
   external_sync_id: string | null
   external_provider: string | null

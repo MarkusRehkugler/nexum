@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Clock, User, AlignLeft, Calendar, Mail } from 'lucide-react'
-import { getCalendarEntryById } from '@/modules/calendar/queries'
+import { getCalendarEntryById, getGroupEventParticipants } from '@/modules/calendar/queries'
 import { getTenantProfile } from '@/modules/settings/queries'
+import { getClients } from '@/modules/clients/queries'
+import { ParticipantsPanel } from './participants-panel'
 import { TYPE_LABELS, TYPE_COLORS } from '@/modules/calendar/schemas'
 import { buildAppointmentConfirmationMailtoUrl, buildAppointmentReminderMailtoUrl } from '@/modules/email/compose'
 import { AppointmentActions } from './appointment-actions'
@@ -35,10 +37,14 @@ function durationMinutes(startsAt: string, endsAt: string): number {
 
 export default async function AppointmentDetailPage({ params }: Props) {
   const { id } = await params
-  const [entry, profile] = await Promise.all([
+  const [entry, profile, allClients] = await Promise.all([
     getCalendarEntryById(id),
     getTenantProfile(),
+    getClients(),
   ])
+  const participants = entry?.is_group_event
+    ? await getGroupEventParticipants(id)
+    : []
 
   if (!entry) notFound()
 
@@ -115,10 +121,16 @@ export default async function AppointmentDetailPage({ params }: Props) {
 
       {/* Detail-Karte */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm space-y-5">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 flex-wrap">
           <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${typeClass}`}>
             {typeLabel}
           </span>
+          {entry.is_group_event && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
+              Gruppenveranstaltung
+              {entry.max_participants ? ` · max. ${entry.max_participants}` : ''}
+            </span>
+          )}
           {entry.session_id && (
             <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-200">
               Sitzung verknüpft
@@ -163,6 +175,18 @@ export default async function AppointmentDetailPage({ params }: Props) {
           )}
         </dl>
       </div>
+
+      {/* Teilnehmer (nur Gruppenveranstaltungen) */}
+      {entry.is_group_event && (
+        <ParticipantsPanel
+          entryId={entry.id}
+          entryTitle={entry.title}
+          entryDate={entry.starts_at}
+          maxParticipants={entry.max_participants}
+          initialParticipants={participants as any}
+          availableClients={allClients}
+        />
+      )}
     </div>
   )
 }

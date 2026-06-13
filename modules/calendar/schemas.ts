@@ -4,10 +4,12 @@ export const createCalendarEntrySchema = z.object({
   title: z.string().min(1, 'Titel ist erforderlich').max(255),
   clientId: z.string().uuid('Ungültiger Klient').optional().nullable(),
   type: z.enum(['session', 'block', 'event', 'reminder']).default('session'),
-  date: z.string().min(1, 'Datum ist erforderlich'),      // YYYY-MM-DD
+  date: z.string().min(1, 'Datum ist erforderlich'),        // YYYY-MM-DD
   startTime: z.string().min(1, 'Uhrzeit ist erforderlich'), // HH:MM
   durationMinutes: z.coerce.number().int().min(15, 'Mind. 15 Minuten').max(480).default(60),
   description: z.string().max(2000).optional().nullable(),
+  isGroupEvent: z.coerce.boolean().default(false),
+  maxParticipants: z.coerce.number().int().min(2).max(999).optional().nullable(),
 })
 
 export type CreateCalendarEntryInput = z.infer<typeof createCalendarEntrySchema>

@@ -37,6 +37,32 @@ export async function getCalendarEntriesForWeek(
 }
 
 /**
+ * Gibt alle Teilnehmer eines Gruppen-Termins zurück.
+ */
+export async function getGroupEventParticipants(entryId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('group_event_participants')
+    .select(`
+      id,
+      client_id,
+      attended,
+      client:clients(id, display_label, personal_data)
+    `)
+    .eq('entry_id', entryId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('getGroupEventParticipants error:', error)
+    return []
+  }
+
+  return data ?? []
+}
+
+/**
  * Gibt einen einzelnen Termin zurück.
  */
 export async function getCalendarEntryById(
@@ -60,6 +86,36 @@ export async function getCalendarEntryById(
   }
 
   return data as CalendarEntryWithClient
+}
+
+/**
+ * Gibt alle Termine des heutigen Tages zurück.
+ */
+export async function getTodayCalendarEntries(): Promise<CalendarEntryWithClient[]> {
+  const supabase = await createClient()
+
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = new Date()
+  end.setHours(23, 59, 59, 999)
+
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .select(`
+      *,
+      client:clients(id, display_label, personal_data)
+    `)
+    .is('deleted_at', null)
+    .gte('starts_at', start.toISOString())
+    .lte('starts_at', end.toISOString())
+    .order('starts_at', { ascending: true })
+
+  if (error) {
+    console.error('getTodayCalendarEntries error:', error)
+    return []
+  }
+
+  return (data ?? []) as CalendarEntryWithClient[]
 }
 
 /**

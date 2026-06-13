@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, Video } from 'lucide-react'
+import { Plus, Video, Users } from 'lucide-react'
 import type { CalendarEntryWithClient } from '@/modules/calendar/types'
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
@@ -213,6 +213,7 @@ export function WeekTimeGrid({ days, entriesByDay }: Props) {
                     <div className="flex h-full flex-col px-1.5 py-1 leading-tight overflow-hidden">
                       <div className="flex items-center gap-1">
                         {linked && <Video className="h-2.5 w-2.5 shrink-0 text-violet-500" />}
+                        {entry.is_group_event && <Users className="h-2.5 w-2.5 shrink-0 text-violet-400" />}
                         <span className={`truncate text-[10px] font-semibold ${colors.text}`}>
                           {entry.title}
                         </span>
@@ -220,7 +221,9 @@ export function WeekTimeGrid({ days, entriesByDay }: Props) {
                       {height > 36 && (
                         <span className={`truncate text-[9px] ${colors.sub}`}>
                           {formatTime(entry.starts_at)}
-                          {clientName ? ` · ${clientName}` : ''}
+                          {entry.is_group_event
+                            ? ' · Gruppe'
+                            : clientName ? ` · ${clientName}` : ''}
                         </span>
                       )}
                     </div>

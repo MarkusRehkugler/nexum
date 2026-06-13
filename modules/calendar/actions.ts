@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createCalendarEntrySchema } from './schemas'
 
@@ -22,13 +23,15 @@ export async function createCalendarEntryAction(
   formData: FormData
 ): Promise<CreateCalendarEntryState> {
   const raw = {
-    title:           formData.get('title') as string,
-    clientId:        (formData.get('clientId') as string) || null,
-    type:            formData.get('type') as string,
-    date:            formData.get('date') as string,
-    startTime:       formData.get('startTime') as string,
-    durationMinutes: formData.get('durationMinutes'),
-    description:     (formData.get('description') as string) || null,
+    title:            formData.get('title') as string,
+    clientId:         (formData.get('clientId') as string) || null,
+    type:             formData.get('type') as string,
+    date:             formData.get('date') as string,
+    startTime:        formData.get('startTime') as string,
+    durationMinutes:  formData.get('durationMinutes'),
+    description:      (formData.get('description') as string) || null,
+    isGroupEvent:     formData.get('isGroupEvent') === 'true',
+    maxParticipants:  formData.get('maxParticipants') || null,
   }
 
   const result = createCalendarEntrySchema.safeParse(raw)
@@ -63,17 +66,23 @@ export async function createCalendarEntryAction(
     return { errors: { date: ['Ungültiges Datum/Uhrzeit.'] } }
   }
 
+  const isGroupEvent  = result.data.isGroupEvent ?? false
+  const maxParticipants = result.data.maxParticipants ?? null
+  const participantIds = (formData.getAll('participantIds') as string[]).filter(Boolean)
+
   const { data: entry, error } = await supabase
     .from('calendar_entries')
     .insert({
-      tenant_id:   profile.tenant_id,
-      user_id:     user.id,
-      client_id:   clientId ?? null,
+      tenant_id:        profile.tenant_id,
+      user_id:          user.id,
+      client_id:        isGroupEvent ? null : (clientId ?? null),
       type,
       title,
-      description: description ?? null,
-      starts_at:   startsAt.toISOString(),
-      ends_at:     endsAt.toISOString(),
+      description:      description ?? null,
+      starts_at:        startsAt.toISOString(),
+      ends_at:          endsAt.toISOString(),
+      is_group_event:   isGroupEvent,
+      max_participants: maxParticipants,
     })
     .select('id')
     .single()
@@ -83,7 +92,88 @@ export async function createCalendarEntryAction(
     return { errors: { general: ['Termin konnte nicht angelegt werden.'] } }
   }
 
+  // Teilnehmer eintragen (Gruppen-Termin)
+  if (isGroupEvent && participantIds.length > 0) {
+    await supabase
+      .from('group_event_participants')
+      .insert(
+        participantIds.map(cid => ({
+          tenant_id: profile.tenant_id,
+          entry_id:  entry.id,
+          client_id: cid,
+        }))
+      )
+  }
+
   redirect(`/calendar/${entry.id}`)
+}
+
+/**
+ * Fügt einen Teilnehmer zu einem Gruppen-Termin hinzu.
+ */
+export async function addGroupParticipantAction(
+  entryId: string,
+  clientId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single()
+
+  const { error } = await supabase
+    .from('group_event_participants')
+    .upsert(
+      { tenant_id: profile!.tenant_id, entry_id: entryId, client_id: clientId, deleted_at: null },
+      { onConflict: 'entry_id,client_id' }
+    )
+
+  if (error) return { error: 'Teilnehmer konnte nicht hinzugefügt werden.' }
+  revalidatePath(`/calendar/${entryId}`)
+  return {}
+}
+
+/**
+ * Entfernt einen Teilnehmer (Soft-Delete).
+ */
+export async function removeGroupParticipantAction(
+  participantId: string,
+  entryId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('group_event_participants')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', participantId)
+
+  if (error) return { error: 'Teilnehmer konnte nicht entfernt werden.' }
+  revalidatePath(`/calendar/${entryId}`)
+  return {}
+}
+
+/**
+ * Schaltet die Anwesenheit eines Teilnehmers um.
+ */
+export async function toggleAttendanceAction(
+  participantId: string,
+  attended: boolean,
+  entryId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('group_event_participants')
+    .update({ attended })
+    .eq('id', participantId)
+
+  if (error) return { error: 'Anwesenheit konnte nicht gespeichert werden.' }
+  revalidatePath(`/calendar/${entryId}`)
+  return {}
 }
 
 /**

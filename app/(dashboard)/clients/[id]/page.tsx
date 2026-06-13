@@ -6,8 +6,10 @@ import {
 } from 'lucide-react'
 import { getClientById, getClientJournal } from '@/modules/clients/queries'
 import { getDocumentsWithSignedUrls } from '@/modules/documents/queries'
+import { getCarePlanForClient } from '@/modules/care-plans/queries'
 import { ConsentPanel } from './consent-panel'
 import { DocumentsSection } from './documents-section'
+import { CarePlanPanel } from './care-plan-panel'
 import type { ConsentRecord } from '@/modules/consent/types'
 import { DEFAULT_CONSENT } from '@/modules/consent/types'
 
@@ -53,10 +55,11 @@ const JOURNAL_LABEL: Record<string, string> = {
 
 export default async function ClientDetailPage({ params }: Props) {
   const { id } = await params
-  const [client, documents, journal] = await Promise.all([
+  const [client, documents, journal, carePlanData] = await Promise.all([
     getClientById(id),
     getDocumentsWithSignedUrls('client', id),
     getClientJournal(id),
+    getCarePlanForClient(id),
   ])
 
   if (!client) notFound()
@@ -197,6 +200,13 @@ export default async function ClientDetailPage({ params }: Props) {
 
       {/* Dokumente */}
       <DocumentsSection clientId={id} initialDocuments={documents} />
+
+      {/* Begleitplan */}
+      <CarePlanPanel
+        clientId={id}
+        caseId={carePlanData.caseId}
+        initialPlan={carePlanData.carePlan}
+      />
 
       {/* Verlauf / Journal */}
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm">
