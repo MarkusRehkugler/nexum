@@ -93,9 +93,7 @@ export function ParticipantsPanel({
   }
 
   function clientName(p: CourseParticipant) {
-    return (p.client?.personal_data as Record<string, unknown> | null)?.name as string
-      || p.client?.display_label
-      || 'Unbekannt'
+    return p.client?.personal_data?.name || p.client?.display_label || 'Unbekannt'
   }
 
   return (
@@ -125,7 +123,7 @@ export function ParticipantsPanel({
           </option>
           {availableClients.map(c => (
             <option key={c.id} value={c.id}>
-              {(c.personal_data as Record<string, unknown> | null)?.name as string || c.display_label}
+              {c.personal_data?.name || c.display_label}
             </option>
           ))}
         </select>

@@ -1,3 +1,5 @@
+import type { ClientPersonalData } from '@/modules/clients/types'
+
 export type CourseType = 'course' | 'seminar' | 'workshop' | 'group'
 export type CourseStatus = 'draft' | 'active' | 'cancelled' | 'completed'
 export type ParticipantStatus = 'registered' | 'waitlist' | 'cancelled'
@@ -24,7 +26,7 @@ export interface CourseParticipant {
   client?: {
     id: string
     display_label: string
-    personal_data: Record<string, unknown> | null
+    personal_data: ClientPersonalData | null
   }
 }
 
