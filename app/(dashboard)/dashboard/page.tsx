@@ -123,7 +123,7 @@ export default async function DashboardPage() {
 
     supabase
       .from('tenant_profiles')
-      .select('company_name, owner_name')
+      .select('company_name, first_name, last_name')
       .eq('tenant_id', tenantId)
       .maybeSingle(),
   ])
@@ -141,7 +141,7 @@ export default async function DashboardPage() {
   const tenantProfile    = tenantProfileRes.data
 
   // Onboarding-Schritte
-  const hasProfile   = !!(tenantProfile?.company_name || tenantProfile?.owner_name)
+  const hasProfile   = !!(tenantProfile?.company_name || tenantProfile?.first_name)
   const hasClient    = activeClients > 0
   const hasSession   = totalSessions > 0
   const hasProtocol  = aiProtocols > 0
