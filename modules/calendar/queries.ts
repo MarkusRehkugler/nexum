@@ -119,6 +119,30 @@ export async function getTodayCalendarEntries(): Promise<CalendarEntryWithClient
 }
 
 /**
+ * Gibt alle Gruppen-Termine zurück (is_group_event = true).
+ */
+export async function getGroupEvents(): Promise<CalendarEntryWithClient[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .select(`
+      *,
+      client:clients(id, display_label, personal_data)
+    `)
+    .is('deleted_at', null)
+    .eq('is_group_event', true)
+    .order('starts_at', { ascending: false })
+
+  if (error) {
+    console.error('getGroupEvents error:', error)
+    return []
+  }
+
+  return (data ?? []) as CalendarEntryWithClient[]
+}
+
+/**
  * Gibt die nächsten N anstehenden Termine zurück (für Dashboard-Widget).
  */
 export async function getUpcomingCalendarEntries(

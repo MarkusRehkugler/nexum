@@ -13,6 +13,7 @@ import {
   Shield,
   Settings,
   LogOut,
+  UsersRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { logoutAction } from '@/modules/auth/actions'
@@ -22,7 +23,8 @@ const navItems = [
   { href: '/clients', label: 'Klienten', icon: Users },
   { href: '/sessions', label: 'Sitzungen', icon: FileText },
   { href: '/calendar', label: 'Kalender', icon: CalendarDays },
-  { href: '/tasks', label: 'Aufgaben', icon: ListChecks },
+  { href: '/groups',   label: 'Gruppen',  icon: UsersRound },
+  { href: '/tasks',    label: 'Aufgaben', icon: ListChecks },
   { href: '/invoices', label: 'Rechnungen', icon: Receipt },
   { href: '/documents', label: 'Dokumente', icon: FolderOpen },
 ]

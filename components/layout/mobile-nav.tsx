@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, CalendarDays, FileText, ListChecks } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, FileText, UsersRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,7 +10,7 @@ const navItems = [
   { href: '/clients',   label: 'Klienten',  icon: Users },
   { href: '/calendar',  label: 'Kalender',  icon: CalendarDays },
   { href: '/sessions',  label: 'Sitzungen', icon: FileText },
-  { href: '/tasks',     label: 'Aufgaben',  icon: ListChecks },
+  { href: '/groups',    label: 'Gruppen',   icon: UsersRound },
 ]
 
 export function MobileNav() {
