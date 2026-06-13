@@ -72,23 +72,16 @@ export function CarePlanPanel({ clientId, caseId, initialPlan }: Props) {
             <h2 className="text-sm font-semibold text-zinc-700">Begleitplan</h2>
             <p className="text-xs text-zinc-400 mt-0.5">Ziele, Methoden, Meilensteine</p>
           </div>
-          {caseId ? (
-            <button
-              onClick={startEdit}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              {isEmpty ? 'Anlegen' : 'Bearbeiten'}
-            </button>
-          ) : null}
+          <button
+            onClick={startEdit}
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 transition-colors"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {isEmpty ? 'Anlegen' : 'Bearbeiten'}
+          </button>
         </div>
 
-        {!caseId ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center gap-1">
-            <p className="text-sm text-zinc-400">Noch keine Sitzung vorhanden.</p>
-            <p className="text-xs text-zinc-400">Erst eine Sitzung anlegen, dann kann ein Begleitplan erstellt werden.</p>
-          </div>
-        ) : isEmpty ? (
+        {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
             <p className="text-sm text-zinc-400">Noch kein Begleitplan angelegt.</p>
             <button onClick={startEdit} className="text-xs text-zinc-500 underline hover:text-zinc-800 transition-colors">

@@ -29,10 +29,32 @@ export async function saveCarePlanAction(
       .order('created_at', { ascending: true })
       .limit(1)
 
-    if (!cases || cases.length === 0) {
-      return { error: 'Kein Fall für diesen Klienten gefunden. Bitte erst eine Sitzung anlegen.' }
+    if (cases && cases.length > 0) {
+      activeCaseId = cases[0].id
+    } else {
+      // Kein Fall vorhanden — automatisch anlegen
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: prof } = await supabase
+        .from('user_profiles')
+        .select('tenant_id')
+        .eq('id', user!.id)
+        .single()
+
+      const { data: newCase, error: caseError } = await supabase
+        .from('cases')
+        .insert({
+          tenant_id:       prof!.tenant_id,
+          client_id:       clientId,
+          owner_user_id:   user!.id,
+          profession_type: 'coaching',
+          status:          'active',
+        })
+        .select('id')
+        .single()
+
+      if (caseError || !newCase) return { error: 'Fall konnte nicht angelegt werden.' }
+      activeCaseId = newCase.id
     }
-    activeCaseId = cases[0].id
   }
 
   const { data: existing } = await supabase
