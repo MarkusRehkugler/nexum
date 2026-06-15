@@ -177,6 +177,6 @@ export async function saveInvoiceDesignAction(
   if (error) return { error: error.message }
 
   revalidatePath('/settings/invoice')
-  revalidatePath('/invoices', 'layout')
+  revalidatePath('/invoices')
   return { success: true }
 }
