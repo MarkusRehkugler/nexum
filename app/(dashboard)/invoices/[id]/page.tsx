@@ -74,6 +74,13 @@ export default async function InvoiceDetailPage({ params }: Props) {
         .filter(Boolean).join(' · ')
     : null
 
+  const logoUrl = profile?.logo_storage_key
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/tenant-logos/${profile.logo_storage_key}`
+    : null
+  const logoPos     = profile?.logo_position ?? 'left'
+  const accentColor = profile?.invoice_accent_color ?? '#18181b'
+  const showFooter  = profile?.invoice_show_footer ?? true
+
   const hasResend = !!process.env.RESEND_API_KEY
 
   const mailtoUrl = clientEmail ? buildInvoiceMailtoUrl({
@@ -152,23 +159,60 @@ export default async function InvoiceDetailPage({ params }: Props) {
         className="rounded-xl border border-zinc-200 bg-white p-10 shadow-sm print:shadow-none print:border-none print:rounded-none print:p-0 max-w-3xl mx-auto font-sans"
       >
         {/* Kopfzeile */}
-        <div className="flex items-start justify-between mb-10">
-          <div className="space-y-0.5">
-            <p className="font-semibold text-zinc-900">{senderName}</p>
-            {senderAddress && <p className="text-sm text-zinc-500">{senderAddress}</p>}
-            {senderContact && <p className="text-sm text-zinc-500">{senderContact}</p>}
-            {profile?.website && <p className="text-sm text-zinc-400">{profile.website}</p>}
-          </div>
-          <div className="text-right">
-            <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">
-              {isStorno ? 'STORNORECHNUNG' : 'RECHNUNG'}
-            </h1>
-            <p className="font-mono text-sm text-zinc-500 mt-1">{invoice.invoice_number}</p>
-            <span className={`print:hidden mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_CLASSES[invoice.status]}`}>
-              {STATUS_LABELS[invoice.status]}
-            </span>
-          </div>
-        </div>
+        {(() => {
+          const logoImg = logoUrl && logoPos !== 'none' ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="Logo" className="h-14 w-auto max-w-[140px] object-contain" />
+          ) : null
+
+          const senderBlock = (
+            <div className="space-y-0.5">
+              <p className="font-semibold text-zinc-900">{senderName}</p>
+              {senderAddress && <p className="text-sm text-zinc-500">{senderAddress}</p>}
+              {senderContact && <p className="text-sm text-zinc-500">{senderContact}</p>}
+              {profile?.website && <p className="text-sm text-zinc-400">{profile.website}</p>}
+            </div>
+          )
+
+          const rechnungBlock = (
+            <div className="text-right shrink-0">
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: accentColor }}>
+                {isStorno ? 'STORNORECHNUNG' : 'RECHNUNG'}
+              </h1>
+              <p className="font-mono text-sm text-zinc-500 mt-1">{invoice.invoice_number}</p>
+              <span className={`print:hidden mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${STATUS_CLASSES[invoice.status]}`}>
+                {STATUS_LABELS[invoice.status]}
+              </span>
+            </div>
+          )
+
+          if (logoPos === 'center') return (
+            <div className="mb-10">
+              <div className="flex justify-center mb-6">{logoImg}</div>
+              <div className="flex items-start justify-between">{senderBlock}{rechnungBlock}</div>
+            </div>
+          )
+
+          if (logoPos === 'right') return (
+            <div className="flex items-start justify-between mb-10">
+              {senderBlock}
+              <div className="flex flex-col items-end gap-3">{rechnungBlock}{logoImg}</div>
+            </div>
+          )
+
+          if (logoPos === 'left' && logoImg) return (
+            <div className="flex items-start justify-between mb-10">
+              <div className="flex items-start gap-4">{logoImg}{senderBlock}</div>
+              {rechnungBlock}
+            </div>
+          )
+
+          return (
+            <div className="flex items-start justify-between mb-10">
+              {senderBlock}{rechnungBlock}
+            </div>
+          )
+        })()}
 
         {/* Empfänger + Metadaten */}
         <div className="grid grid-cols-2 gap-8 mb-10">
@@ -263,9 +307,9 @@ export default async function InvoiceDetailPage({ params }: Props) {
               <span>{formatEUR(Number(invoice.tax_amount))}</span>
             </div>
           )}
-          <div className="flex justify-between border-t border-zinc-200 pt-2 text-base font-bold text-zinc-900">
-            <span>Gesamtbetrag</span>
-            <span>{formatEUR(Number(invoice.total_gross))}</span>
+          <div className="flex justify-between border-t border-zinc-200 pt-2 text-base font-bold">
+            <span className="text-zinc-900">Gesamtbetrag</span>
+            <span style={{ color: accentColor }}>{formatEUR(Number(invoice.total_gross))}</span>
           </div>
           {(isKleinunt || invoice.tax_mode === 'none') && (
             <p className="text-xs text-zinc-400 pt-1">
@@ -296,6 +340,31 @@ export default async function InvoiceDetailPage({ params }: Props) {
           <div className="mt-10 border-t border-zinc-100 pt-5 text-xs text-zinc-400 space-y-0.5">
             <p className="font-medium text-zinc-500">Bankverbindung</p>
             <p>{bankDetails}</p>
+          </div>
+        )}
+
+        {/* Kontakt-Fußzeile */}
+        {showFooter && (
+          <div className="mt-8 pt-4 border-t-2 text-xs text-zinc-500 space-y-1" style={{ borderColor: accentColor }}>
+            <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+              <span>
+                {[senderName, senderAddress].filter(Boolean).join(' · ')}
+              </span>
+              <span>
+                {[profile?.phone, profile?.email, profile?.website].filter(Boolean).join(' · ')}
+              </span>
+            </div>
+            {(profile?.tax_id || profile?.vat_id || bankDetails) && (
+              <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-zinc-400">
+                <span>
+                  {[
+                    profile?.tax_id && `St.-Nr.: ${profile.tax_id}`,
+                    profile?.vat_id && `USt-IdNr.: ${profile.vat_id}`,
+                  ].filter(Boolean).join(' · ')}
+                </span>
+                {bankDetails && <span>{bankDetails}</span>}
+              </div>
+            )}
           </div>
         )}
       </div>

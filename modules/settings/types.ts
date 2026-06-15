@@ -22,6 +22,10 @@ export interface TenantProfile {
   payment_terms_days: number
   client_label?: string | null
   fee_schedules?: string[]
+  logo_storage_key?: string | null
+  logo_position?: 'left' | 'right' | 'center' | 'none'
+  invoice_accent_color?: string
+  invoice_show_footer?: boolean
 }
 
 export const TAX_MODE_LABELS: Record<TenantProfile['tax_mode'], string> = {

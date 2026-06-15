@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 const tabs = [
   { href: '/settings/profile',  label: 'Stammdaten' },
   { href: '/settings/services', label: 'Leistungen' },
+  { href: '/settings/calendar', label: 'Kalender' },
+  { href: '/settings/invoice',  label: 'Rechnungsdesign' },
 ]
 
 export function SettingsNav() {
