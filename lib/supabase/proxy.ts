@@ -50,5 +50,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Admin route: edge-level check (page still verifies independently)
+  if (pathname === '/admin' && user) {
+    const adminEmail  = process.env.ADMIN_EMAIL
+    const adminUserId = process.env.ADMIN_USER_ID
+    const isAdmin =
+      !!adminEmail &&
+      user.email === adminEmail &&
+      (!adminUserId || user.id === adminUserId)
+
+    if (!isAdmin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return supabaseResponse
 }
