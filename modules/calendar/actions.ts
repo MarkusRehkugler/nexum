@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { createCalendarEntrySchema } from './schemas'
+import { createCalendarEntrySchema, TYPE_LABELS } from './schemas'
+import { sendAppointmentConfirmation } from '@/modules/email/send'
+import { createGoogleEvent, deleteGoogleEvent } from '@/modules/google-calendar/client'
 
 export type CreateCalendarEntryState = {
   errors?: {
@@ -105,6 +107,67 @@ export async function createCalendarEntryAction(
       )
   }
 
+  // Push to Google Calendar (fire-and-forget, non-blocking)
+  try {
+    const googleEventId = await createGoogleEvent(profile.tenant_id, {
+      summary:     title,
+      description: description ?? undefined,
+      start: { dateTime: startsAt.toISOString(), timeZone: 'Europe/Berlin' },
+      end:   { dateTime: endsAt.toISOString(),   timeZone: 'Europe/Berlin' },
+    })
+    if (googleEventId) {
+      await supabase
+        .from('calendar_entries')
+        .update({ google_event_id: googleEventId })
+        .eq('id', entry.id)
+    }
+  } catch (e) {
+    console.error('[calendar] Google Cal push failed:', e)
+  }
+
+  // Send confirmation email if client has an email address
+  if (clientId && !isGroupEvent) {
+    try {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('personal_data, display_label')
+        .eq('id', clientId)
+        .single()
+
+      const personalData = client?.personal_data as { name?: string; email?: string } | null
+      const clientEmail = personalData?.email
+
+      if (clientEmail) {
+        const { data: tenantProfile } = await supabase
+          .from('tenant_profiles')
+          .select('first_name, last_name, company_name')
+          .eq('tenant_id', profile.tenant_id)
+          .single()
+
+        const senderName = tenantProfile
+          ? ([tenantProfile.first_name, tenantProfile.last_name].filter(Boolean).join(' ') || tenantProfile.company_name || 'Ihr Coach')
+          : 'Ihr Coach'
+
+        const datePart = startsAt.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+        const startStr = startsAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+        const endStr   = endsAt.toLocaleTimeString('de-DE',   { hour: '2-digit', minute: '2-digit' })
+
+        await sendAppointmentConfirmation({
+          to:              clientEmail,
+          clientName:      personalData?.name ?? client?.display_label ?? 'Klient',
+          title,
+          typeLabel:       TYPE_LABELS[type] ?? type,
+          dateTime:        `${datePart}, ${startStr}`,
+          endTime:         endStr,
+          durationMinutes,
+          senderName,
+        })
+      }
+    } catch (e) {
+      console.error('[calendar] confirmation email failed:', e)
+    }
+  }
+
   redirect(`/calendar/${entry.id}`)
 }
 
@@ -181,6 +244,28 @@ export async function toggleAttendanceAction(
  */
 export async function deleteCalendarEntryAction(id: string): Promise<void> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single()
+
+  const { data: entry } = await supabase
+    .from('calendar_entries')
+    .select('google_event_id')
+    .eq('id', id)
+    .single()
+
+  if (entry?.google_event_id && profile?.tenant_id) {
+    try {
+      await deleteGoogleEvent(profile.tenant_id, entry.google_event_id)
+    } catch (e) {
+      console.error('[calendar] Google Cal delete failed:', e)
+    }
+  }
 
   await supabase
     .from('calendar_entries')

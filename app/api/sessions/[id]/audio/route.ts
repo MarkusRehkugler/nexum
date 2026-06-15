@@ -55,6 +55,25 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (!session) return NextResponse.json({ error: 'Sitzung nicht gefunden' }, { status: 404 })
 
+  // Allowlist doubles as content-type → extension map
+  // video/webm included because Chrome MediaRecorder reports it for audio-only recordings
+  const ALLOWED_AUDIO_TYPES: Record<string, string> = {
+    'audio/webm': 'webm',
+    'audio/mp4':  'mp4',
+    'audio/mpeg': 'mp3',
+    'audio/wav':  'wav',
+    'audio/ogg':  'ogg',
+    'video/webm': 'webm',
+  }
+
+  const rawContentType = req.headers.get('content-type') ?? ''
+  const contentType = rawContentType.split(';')[0].trim().toLowerCase()
+  const ext = ALLOWED_AUDIO_TYPES[contentType]
+
+  if (!ext) {
+    return NextResponse.json({ error: 'Ungültiger Dateityp. Erlaubt: webm, mp4, mp3, wav, ogg.' }, { status: 415 })
+  }
+
   const MAX_BYTES = 500 * 1024 * 1024 // 500 MB
   const contentLength = req.headers.get('content-length')
   if (contentLength && parseInt(contentLength) > MAX_BYTES) {
@@ -68,12 +87,6 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (arrayBuffer.byteLength > MAX_BYTES) {
     return NextResponse.json({ error: 'Datei zu groß (max. 500 MB)' }, { status: 413 })
   }
-
-  const contentType = req.headers.get('content-type') ?? 'audio/webm'
-  const ext = contentType.includes('mp4') ? 'mp4'
-    : contentType.includes('mpeg') || contentType.includes('mp3') ? 'mp3'
-    : contentType.includes('wav') ? 'wav'
-    : 'webm'
 
   const storagePath = `${session.tenant_id}/${id}.${ext}`
 

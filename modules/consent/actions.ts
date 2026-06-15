@@ -21,11 +21,20 @@ export async function updateConsentAction(
 
   if (!user) return { error: 'Nicht authentifiziert.' }
 
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.tenant_id) return { error: 'Kein Mandant gefunden.' }
+
   // Bestehende consent_records laden
   const { data: client } = await supabase
     .from('clients')
     .select('consent_records')
     .eq('id', clientId)
+    .eq('tenant_id', profile.tenant_id)
     .single()
 
   if (!client) return { error: 'Klient nicht gefunden.' }
@@ -42,6 +51,7 @@ export async function updateConsentAction(
     .from('clients')
     .update({ consent_records: merged })
     .eq('id', clientId)
+    .eq('tenant_id', profile.tenant_id)
 
   if (error) {
     console.error('updateConsent error:', error)

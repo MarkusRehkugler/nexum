@@ -53,28 +53,15 @@ export async function getInvoiceById(id: string): Promise<InvoiceWithClient | nu
   return data as unknown as InvoiceWithClient
 }
 
-/** Nächste Rechnungsnummer für diesen Tenant: PREFIX-YYYY-NNN */
+/** Nächste Rechnungsnummer für diesen Tenant: PREFIX-YYYY-NNN (atomisch via DB-Sequenz) */
 export async function getNextInvoiceNumber(tenantId: string): Promise<string> {
   const supabase = await createClient()
-  const year = new Date().getFullYear()
-
-  const [{ count }, { data: profileData }] = await Promise.all([
-    supabase
-      .from('invoices')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .gte('created_at', new Date(year, 0, 1).toISOString())
-      .lt('created_at', new Date(year + 1, 0, 1).toISOString()),
-    supabase
-      .from('tenant_profiles')
-      .select('invoice_prefix')
-      .eq('tenant_id', tenantId)
-      .maybeSingle(),
-  ])
-
-  const prefix = (profileData as { invoice_prefix?: string } | null)?.invoice_prefix || 'RE'
-  const seq = ((count ?? 0) + 1).toString().padStart(3, '0')
-  return `${prefix}-${year}-${seq}`
+  const { data, error } = await supabase.rpc('get_next_invoice_number', { p_tenant_id: tenantId })
+  if (error || !data) {
+    console.error('getNextInvoiceNumber error:', error)
+    return `RE-${new Date().getFullYear()}-001`
+  }
+  return data as string
 }
 
 // ============================================================

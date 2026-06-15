@@ -99,6 +99,8 @@ export async function updateTaskStatusAction(
   status: 'open' | 'completed' | 'skipped'
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
 
   const { error } = await supabase
     .from('client_tasks')
@@ -118,6 +120,8 @@ export async function updateTaskStatusAction(
  */
 export async function deleteTaskAction(taskId: string): Promise<void> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
   await supabase
     .from('client_tasks')
     .update({ deleted_at: new Date().toISOString() })

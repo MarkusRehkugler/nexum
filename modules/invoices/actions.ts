@@ -115,12 +115,13 @@ export async function createInvoiceAction(
     return { errors: { general: ['Rechnung konnte nicht erstellt werden.'] } }
   }
 
-  // Verknüpfte Sitzungen als abgerechnet markieren
+  // Verknüpfte Sitzungen als abgerechnet markieren (nur eigene Tenant-Sessions)
   if (sessionIds.length > 0) {
     await supabase
       .from('sessions')
       .update({ invoice_id: invoice.id, status: 'billed' })
       .in('id', sessionIds)
+      .eq('tenant_id', profile.tenant_id)
   }
 
   redirect(`/invoices/${invoice.id}`)
@@ -128,6 +129,8 @@ export async function createInvoiceAction(
 
 export async function markInvoicePaidAction(invoiceId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
   const { error } = await supabase
     .from('invoices')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
@@ -139,6 +142,8 @@ export async function markInvoicePaidAction(invoiceId: string): Promise<{ error?
 
 export async function markInvoiceSentAction(invoiceId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
   const { error } = await supabase
     .from('invoices')
     .update({ status: 'sent' })
@@ -239,6 +244,8 @@ export async function sendReminderAction(
   level: 1 | 2 | 'final'
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
 
   const field =
     level === 1      ? 'reminder_1_sent_at'   :
@@ -347,6 +354,8 @@ export async function toggleRecurringInvoiceAction(
   active: boolean
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
   const { error } = await supabase
     .from('recurring_invoices')
     .update({ active })
@@ -358,6 +367,8 @@ export async function toggleRecurringInvoiceAction(
 
 export async function deleteRecurringInvoiceAction(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
   const { error } = await supabase
     .from('recurring_invoices')
     .update({ deleted_at: new Date().toISOString() })

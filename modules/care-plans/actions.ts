@@ -17,6 +17,15 @@ export async function saveCarePlanAction(
   data: SaveData
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
+
+  const { data: prof } = await supabase
+    .from('user_profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single()
+  if (!prof?.tenant_id) return { error: 'Kein Mandant gefunden.' }
 
   let activeCaseId = caseId
 
@@ -33,19 +42,12 @@ export async function saveCarePlanAction(
       activeCaseId = cases[0].id
     } else {
       // Kein Fall vorhanden — automatisch anlegen
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data: prof } = await supabase
-        .from('user_profiles')
-        .select('tenant_id')
-        .eq('id', user!.id)
-        .single()
-
       const { data: newCase, error: caseError } = await supabase
         .from('cases')
         .insert({
-          tenant_id:       prof!.tenant_id,
+          tenant_id:       prof.tenant_id,
           client_id:       clientId,
-          owner_user_id:   user!.id,
+          owner_user_id:   user.id,
           profession_type: 'coaching',
           status:          'active',
         })
@@ -78,22 +80,15 @@ export async function saveCarePlanAction(
 
     if (error) return { error: 'Begleitplan konnte nicht gespeichert werden.' }
   } else {
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase
-      .from('user_profiles')
-      .select('tenant_id')
-      .eq('id', user!.id)
-      .single()
-
     const { error } = await supabase
       .from('care_plans')
       .insert({
-        case_id: activeCaseId,
-        tenant_id: prof!.tenant_id,
-        goals: data.goals,
-        methods: data.methods || null,
+        case_id:   activeCaseId,
+        tenant_id: prof.tenant_id,
+        goals:     data.goals,
+        methods:   data.methods || null,
         milestones: data.milestones,
-        risks: data.risks || null,
+        risks:     data.risks || null,
       })
 
     if (error) return { error: 'Begleitplan konnte nicht angelegt werden.' }

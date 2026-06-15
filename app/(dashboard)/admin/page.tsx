@@ -37,8 +37,10 @@ export default async function AdminPage() {
 
   if (!user) redirect('/login')
 
-  const adminEmail = process.env.ADMIN_EMAIL
+  const adminEmail  = process.env.ADMIN_EMAIL
+  const adminUserId = process.env.ADMIN_USER_ID
   if (!adminEmail || user.email !== adminEmail) redirect('/dashboard')
+  if (adminUserId && user.id !== adminUserId)   redirect('/dashboard')
 
   const [tenants, stats] = await Promise.all([
     getAllTenantsAdmin(),

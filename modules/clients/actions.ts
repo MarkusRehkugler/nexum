@@ -165,6 +165,8 @@ export async function updateClientAction(
 
 export async function archiveClientAction(clientId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert.' }
 
   const { error } = await supabase
     .from('clients')
